@@ -358,7 +358,7 @@ class MyBot:
         self._send_message(
             chat.id, path=self._data["msg"].joinpath("active_report_status.md"),
             fmt=(
-                settings[key]
+                settings.get(key)
                 for key in [
                     "frequency", "contagions_national", "contagions_regional",
                     "vaccines_national", "vaccines_regional"
@@ -505,13 +505,13 @@ class MyBot:
         # (subtitle, report) pairs
         reports = {}
 
-        if settings[f"{db_key}_national"] == "Sì":
+        if settings.get(f"{db_key}_national") == "Sì":
             reports[" ".join([db_key_translation, "Italia"])] \
             = self._db[db_key].get_report(
                 files_keys["national"], current=current, fmt=fmt
             )
 
-        region = settings[f"{db_key}_regional"]
+        region = settings.get(f"{db_key}_regional")
 
         if region != "Nessun report":
             reports[" ".join([db_key_translation, region])] \
