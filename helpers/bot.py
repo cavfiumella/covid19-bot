@@ -201,7 +201,8 @@ class MyBot:
 
 
     def _set_reports(
-        self, update: Update, context: CallbackContext, setting_index: int = 0
+        self, update: Update, context: CallbackContext,
+        setting: Optional[str] = None
     ) -> Union[str,int]:
         """/imposta_report command.
         Conversate with user to set reports.
@@ -211,69 +212,52 @@ class MyBot:
         chat = update.effective_chat
 
         self._get_chat_logger(chat.id).debug(
-            f"/imposta_report command, setting_index = {setting_index}"
+            f"/imposta_report command, setting = \"{setting}\""
         )
 
-        # start setting
-        if setting_index < 0:
+        settings = list(self._report_settings.keys())
 
-            # keep in memory previous settings
-            if context.chat_data != {}:
-                previous = context.chat_data.copy()
+        # start conversation
+        if setting == None:
+            setting = settings[0]
 
-                self._get_chat_logger(chat.id).debug(
-                    f"Previous settings found: {previous}"
-                )
+            previous = context.chat_data.copy()
+            context.chat_data.clear()
+            context.chat_data.update({"previous_settings": previous})
 
-                context.chat_data.clear()
-                context.chat_data.update(
-                    {"previous_report_settings": previous}
-                )
+            self._get_chat_logger(chat.id).debug(
+                "Previous settings: "
+                f"{context.chat_data.get('previous_settings')}"
+            )
 
         # store answer
         else:
-            setting = list(self._report_settings.keys())[setting_index]
-            answer = update.message.text
+            context.chat_data.update({setting: update.message.text})
 
             self._get_chat_logger(chat.id).debug(
-                f"Setting: \"{setting}\" = \"{answer}\""
+                f"Setting: \"{setting}\" = \"{context.chat_data.get(setting)}\""
             )
 
-            # invalid answer for setting
-            if answer not in self._report_settings[setting]:
-
-                self._send_message(
-                    chat.id, path=self._data["msg"].joinpath("invalid_setting.md"),
-                    fmt=(answer,)
-                )
-
-                self._cancel_set_reports(update, context)
-
-            # store setting answer
-            context.chat_data.update({setting: answer})
-
-        try:
-            setting = list(self._report_settings.keys())[setting_index + 1]
-
-        except:
-
-            # all settings answered
+        # end conversation
+        if settings.index(setting) + 1 >= len(settings):
             self._send_message(
                 chat.id, path=self._data["msg"].joinpath("setting_end.md"),
                 reply_markup=ReplyKeyboardRemove()
             )
 
             self._get_chat_logger(chat.id).info(
-                f"Reports settings: {context.chat_data}"
+                f"Report settings: {context.chat_data}"
             )
 
             return ConversationHandler.END
 
         # ask next question
+        setting = settings[settings.index(setting) + 1]
+
         self._send_message(
             chat.id, path=self._data["msg"].joinpath(f"{setting}_setting.md"),
             reply_markup=ReplyKeyboardMarkup(
-                np.array(list(self._report_settings[setting])).reshape(-1,1),
+                np.array(self._report_settings[setting]).reshape(-1,1),
                 one_time_keyboard=True
             )
         )
@@ -282,7 +266,8 @@ class MyBot:
 
 
     def _cancel_set_reports(
-        self, update: Update, context: CallbackContext
+        self, update: Update, context: CallbackContext,
+        invalid_setting: bool = False
     ) -> int:
         """/annulla command.
         Cancel current report setting conversation.
@@ -291,26 +276,32 @@ class MyBot:
         user = update.effective_user
         chat = update.effective_chat
 
-        self._get_chat_logger(chat.id).debug("Setting cancelled")
+        self._get_chat_logger(chat.id).debug("Cancelling setting")
+
+        if invalid_setting:
+            self._get_chat_logger(chat.id).debug(
+                f"Invalid setting: \"{update.message.text}\""
+            )
+
+        # restore previous configuration
+        previous = context.chat_data["previous_settings"].copy()
+        context.chat_data.clear()
+        context.chat_data.update(previous)
+
+        self._get_chat_logger(chat.id).debug(
+            f"Settings restored: {context.chat_data}"
+        )
 
         self._send_message(
             chat.id, path=self._data["msg"].joinpath("cancel_setting.md"),
             reply_markup=ReplyKeyboardRemove()
         )
 
-        if "previous_report_settings" in context.chat_data:
-            # restore previous configuration
-            previous = context.chat_data["previous_report_settings"].copy()
-            context.chat_data.clear()
-            context.chat_data.update(previous)
-
-            self._get_chat_logger(chat.id).debug(
-                f"Previous settings restored: {context.chat_data}"
+        if invalid_setting:
+            self._send_message(
+                chat.id, path=self._data["msg"].joinpath("invalid_setting.txt"),
+                fmt=(update.message.text,), reply_markup=ReplyKeyboardRemove()
             )
-
-        else:
-            # clear current configuration
-            context.chat_data.clear()
 
         return ConversationHandler.END
 
@@ -723,6 +714,26 @@ class MyBot:
             persistence=PicklePersistence(filename=self._data["pkl"])
         )
 
+        # subscribe to reports handler
+        self._updater.dispatcher.add_handler(ConversationHandler(
+            entry_points=[CommandHandler("imposta_report", self._set_reports)],
+            states = {
+                setting: [
+                    MessageHandler(
+                        Filters.update.message \
+                        & Filters.text(self._report_settings[setting]),
+                        partial(self._set_reports, setting=setting)
+                    ),
+                    MessageHandler(
+                        ~ Filters.update.edited_message,
+                        partial(self._cancel_set_reports, invalid_setting=True)
+                    )
+                ]
+                for setting in self._report_settings.keys()
+            },
+            fallbacks = [CommandHandler("annulla", self._cancel_set_reports)]
+        ))
+
         for command, callback in {
             "start": self._start,
             "help": self._help,
@@ -734,34 +745,6 @@ class MyBot:
             self._updater.dispatcher.add_handler(CommandHandler(
                 command, callback
             ))
-
-        # subscribe to reports handler
-        cancel_handler = CommandHandler("annulla", self._cancel_set_reports)
-        self._updater.dispatcher.add_handler(
-            ConversationHandler(
-
-                entry_points = [
-                    CommandHandler(
-                        "imposta_report",
-                        partial(self._set_reports, setting_index=-1)
-                    )
-                ],
-
-                # every state uses the same callback for MessageHandler
-                states = {
-                    setting: [
-                        cancel_handler, # handler considered before the next
-                        MessageHandler(
-                            Filters.all,
-                            partial(self._set_reports, setting_index=i)
-                        )
-                    ]
-                    for i, setting in enumerate(self._report_settings.keys())
-                },
-
-                fallbacks = [cancel_handler]
-            )
-        )
 
         # easter eggs handler
         self._updater.dispatcher.add_handler(MessageHandler(
