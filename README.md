@@ -1,3 +1,5 @@
+[![CodeQL](https://github.com/cavfiumella/covid19-bot/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/cavfiumella/covid19-bot/actions/workflows/codeql-analysis.yml)
+
 # Covid-19 Bot
 ## Bot Telegram per la ricezione di aggiornamenti su contagi e vaccinazioni da Covid-19 in Italia
 
