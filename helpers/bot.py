@@ -397,6 +397,25 @@ class MyBot:
         )
 
 
+    def _easter_eggs(self, update: Update, context: CallbackContext) -> None:
+        """This is just for fun."""
+
+        user = update.effective_user
+        chat = update.effective_chat
+
+        try:
+            msg = update.message.text
+        except:
+            msg = update.edited_message.text
+
+        if msg == "Chi è il tuo padrone?":
+            self._send_message(
+                chat.id, parse_mode="MarkdownV2",
+                text="[Andrea Serpolla](https://github.com/cavfiumella) è il "
+                     "mio padrone\."
+            )
+
+
     def _update_regions_answers(self) -> None:
         """Update available regions in report settings."""
 
@@ -756,6 +775,11 @@ class MyBot:
                 fallbacks = [cancel_handler]
             )
         )
+
+        # easter eggs handler
+        self._updater.dispatcher.add_handler(MessageHandler(
+            Filters.text(["Chi è il tuo padrone?"]), self._easter_eggs
+        ))
 
         self._updater.dispatcher.bot.set_my_commands(
             list(self._commands_descriptions.items())
