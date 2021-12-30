@@ -61,11 +61,10 @@ class MyBot:
 
     # available commands; (command, description) pairs
     _commands_descriptions: Dict[str, str] = {
-        "start": "avvia il bot e stampa messaggio di benvenuto",
-        "help": "stampa comandi disponibili e loro descrizione",
-        "imposta_report": "attiva e imposta gli aggiornamenti da ricevere "
-                          "sulla situazione epidemica",
-        "disattiva_report": "disattiva la ricezione degli aggiornamenti",
+        "start": "messaggio di benvenuto",
+        "help": "comandi disponibili e uso",
+        "imposta_report": "attiva gli aggiornamenti",
+        "disattiva_report": "disattiva gli aggiornamenti",
         "bug": "segnala un errore",
         "feedback": "lascia un suggerimento"
     }
