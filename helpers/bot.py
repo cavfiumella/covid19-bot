@@ -504,7 +504,7 @@ class MyBot:
 
         region = settings.get(f"{db_key}_regional")
 
-        if region != "Nessun report":
+        if region not in [None, "Nessun report"]:
             reports[" ".join([db_key_translation, region])] \
             = self._db[db_key].get_report(
                 files_keys["regional"], area=region, current=current,
