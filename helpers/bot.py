@@ -215,12 +215,9 @@ class MyBot:
             f"/imposta_report command, setting = \"{setting}\""
         )
 
-        settings = list(self._report_settings.keys())
-
-        # start conversation
+        # conversation starts, store current configuration to restore it later
+        # if needed
         if setting == None:
-            setting = settings[0]
-
             previous = context.chat_data.copy()
             context.chat_data.clear()
             context.chat_data.update({"previous_settings": previous})
@@ -230,7 +227,7 @@ class MyBot:
                 f"{context.chat_data.get('previous_settings')}"
             )
 
-        # store answer
+        # store answer to previous question
         else:
             context.chat_data.update({setting: update.message.text})
 
@@ -238,22 +235,27 @@ class MyBot:
                 f"Setting: \"{setting}\" = \"{context.chat_data.get(setting)}\""
             )
 
-        # end conversation
-        if settings.index(setting) + 1 >= len(settings):
+        settings = list(self._report_settings.keys())
+
+        # update conversation state
+        if setting == None:
+            setting = settings[0]
+        elif settings.index(setting) + 1 < len(settings):
+            setting = settings[settings.index(setting)+1]
+
+        # conversation is over: time for words is over!
+        else:
+            self._get_chat_logger(chat.id).info(
+                f"Report settings: {context.chat_data}"
+            )
             self._send_message(
                 chat.id, path=self._data["msg"].joinpath("setting_end.md"),
                 reply_markup=ReplyKeyboardRemove()
             )
 
-            self._get_chat_logger(chat.id).info(
-                f"Report settings: {context.chat_data}"
-            )
-
             return ConversationHandler.END
 
-        # ask next question
-        setting = settings[settings.index(setting) + 1]
-
+        # ask question
         self._send_message(
             chat.id, path=self._data["msg"].joinpath(f"{setting}_setting.md"),
             reply_markup=ReplyKeyboardMarkup(
