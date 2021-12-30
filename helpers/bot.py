@@ -659,14 +659,7 @@ class MyBot:
                         )
 
                         settings.update({"last_report": current})
-
-                        # update persistence files
-                        ## this call is necessary here because this is not a
-                        ## callback context and changes are not automatically
-                        ## written to disk
-                        self._updater.persistence.update_chat_data(
-                            chat_id, settings
-                        )
+                        self._updater.dispatcher.update_persistence()
 
                     except:
                         # unable to send report
