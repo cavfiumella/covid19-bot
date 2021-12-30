@@ -298,7 +298,7 @@ class MyBot:
             reply_markup=ReplyKeyboardRemove()
         )
 
-        try:
+        if "previous_report_settings" in cotext.chat_data:
             # restore previous configuration
             previous = context.chat_data["previous_report_settings"].copy()
             context.chat_data.clear()
@@ -308,7 +308,7 @@ class MyBot:
                 f"Previous settings restored: {context.chat_data}"
             )
 
-        except:
+        else:
             # clear current configuration
             context.chat_data.clear()
 
