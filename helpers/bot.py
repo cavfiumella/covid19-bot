@@ -631,25 +631,19 @@ class MyBot:
                     current = current.strftime(fmt)
 
                     # skip user
-                    if "frequency" not in settings \
-                    or settings["frequency"] != frequency:
-
+                    if settings.get("frequency") != frequency:
                         self._get_chat_logger(chat_id).debug(
                             "Skipping report delivery with frequency "
                             f"\"{frequency}\": not subscribed"
                         )
-
                         continue
 
                     # current report already sent
-                    if "last_report" in settings \
-                    and current == settings["last_report"]:
-
+                    if current == settings.get("last_report"):
                         self._get_chat_logger(chat_id).debug(
                             "Skipping report delivery with frequency "
                             f"\"{frequency}\": already sent"
                         )
-
                         continue
 
                     try:
