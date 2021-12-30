@@ -65,6 +65,7 @@ class MyBot:
         "help": "comandi disponibili e uso",
         "imposta_report": "attiva gli aggiornamenti",
         "disattiva_report": "disattiva gli aggiornamenti",
+        "stato_report": "visualizza impostazioni",
         "bug": "segnala un errore",
         "feedback": "lascia un suggerimento"
     }
@@ -330,6 +331,39 @@ class MyBot:
 
         self._send_message(
             chat.id, path=self._data["msg"].joinpath("disable_reports.md")
+        )
+
+
+    def _report_status(self, update: Update, context:CallbackContext) -> None:
+        """/stato_report command.
+        Show report settings.
+        """
+
+        user = update.effective_user
+        chat = update.effective_chat
+
+        self._get_chat_logger(chat.id).debug("/stato_report command")
+
+        settings = context.chat_data
+
+        self._get_chat_logger(chat.id).debug(f"Settings: {settings}")
+
+        if settings == {}:
+            self._send_message(
+                chat.id,
+                path=self._data["msg"].joinpath("disabled_report_status.md")
+            )
+            return
+
+        self._send_message(
+            chat.id, path=self._data["msg"].joinpath("active_report_status.md"),
+            fmt=(
+                settings[key]
+                for key in [
+                    "frequency", "contagions_national", "contagions_regional",
+                    "vaccines_national", "vaccines_regional"
+                ]
+            )
         )
 
 
@@ -687,6 +721,7 @@ class MyBot:
             "start": self._start,
             "help": self._help,
             "disattiva_report": self._disable_reports,
+            "stato_report": self._report_status,
             "bug": self._report_bug,
             "feedback": self._feedback
         }.items():
