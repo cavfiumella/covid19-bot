@@ -1,0 +1,1 @@
+Operazione annullata\.

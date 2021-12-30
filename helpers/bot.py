@@ -178,7 +178,7 @@ class MyBot:
             fmt = (user.username,)
 
         self._send_message(
-            chat.id, path=self._data["msg"].joinpath("start.txt"), fmt=fmt
+            chat.id, path=self._data["msg"].joinpath("start.md"), fmt=fmt
         )
 
 
@@ -294,7 +294,7 @@ class MyBot:
         self._get_chat_logger(chat.id).debug("Setting cancelled")
 
         self._send_message(
-            chat.id, path=self._data["msg"].joinpath("cancel_setting.txt"),
+            chat.id, path=self._data["msg"].joinpath("cancel_setting.md"),
             reply_markup=ReplyKeyboardRemove()
         )
 
