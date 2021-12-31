@@ -36,6 +36,123 @@ import traceback
 LOGGER = getLogger(__name__)
 
 
+class Scheduler:
+    """Scheduler class is a wrapper for threading.Thread class.
+    It adds the functionality to start and stop a target function multiple times
+    creating and deleting a Thread when necessary."""
+
+    _logger: Logger = None
+
+    _thread: Thread = None
+
+    _target = None
+    _args: Tuple = None
+    _kwargs: Dict = None
+
+    stop_target: bool = False
+
+
+    def __init__(self, target, args: Tuple = None, kwargs: Dict = None):
+        """Parameters:
+        - target: a callable that accepts a \"scheduler\" argument of type
+                  Scheduler; this argument is used to tell target functions with
+                  infinite loops to stop when scheduler.stop_target is True;
+        - args: positional arguments to be passed to target
+        - kwargs: keyword arguments to be passed to target
+        """
+
+        if args == None:
+            args = tuple()
+
+        if kwargs == None:
+            kwargs =  {}
+
+        kwargs.update({"scheduler": self})
+
+        self._logger = getLogger(str(self))
+
+        self._target = target
+        self._args = args
+        self._kwargs = kwargs
+
+        self._logger.debug(
+            f"Scheduler created: args = {self._args}, kwargs = {self._kwargs}"
+        )
+
+
+    def start(self) -> None:
+        """Start a new thread with target function."""
+
+        self._thread = Thread(
+            target = self._target, args = self._args,
+            kwargs = self._kwargs
+        )
+
+        self.stop_target = False
+        self._thread.start()
+
+        self._logger.debug("Scheduler started")
+        self._logger.debug(f"Scheduler thread: {self._thread}")
+
+
+    def is_alive(self) -> bool:
+        """Returns True if thread is running."""
+
+        if self._thread != None:
+            alive = self._thread.is_alive()
+        else:
+            alive = False
+
+        self._logger.debug(f"Scheduler thread is alive: {alive}")
+
+        return alive
+
+
+    def stop(self, timeout: int = 120, errors = "ignore") -> None:
+        """Stop thread running thread.
+
+        Parameters:
+        - timeout: wait timeout seconds that thread stops, then kill it
+        - errors: when thread is not alive and stop is called an exception is
+                  raised when errors is \"strict\" or nothing happens when
+                  errors is \"ignore\"
+        """
+
+        self._logger.debug("Stopping scheduler")
+
+        if errors not in ["strict", "ignore"]:
+            self._logger.warning(
+                f"Invalid errors \"{errors}\", falling back to \"ignore\""
+            )
+
+            errors = "ignore"
+
+        if not self.is_alive():
+            if errors == "strict":
+                raise ValueError("thread is not running")
+            elif errors == "ignore":
+                return
+
+        self.stop_target = True
+
+        self._logger.debug(f"Waiting {timeout} seconds")
+        self._thread.join(timeout)
+
+        if self.is_alive():
+            self._logger.warning("Scheduler is still running: killing it")
+
+        del self._thread
+        self._thread = None
+
+
+    def __del__(self):
+        """Safely stop scheduler on deletion."""
+
+        self._logger.debug("Deleting scheduler")
+
+        self.stop()
+
+
 class MyBot:
     """This is my BOT.
 
@@ -97,10 +214,7 @@ class MyBot:
     # do not send reports in this hours
     _report_do_not_disturb: Tuple[str] = ("21:00", "10:00")
 
-    _report_scheduler: Thread = None
-
-    # variable to stop thread
-    _stop_report_scheduler: bool = False
+    _report_scheduler: Scheduler = None
 
 
     def _get_chat_logger(self, chat_id: int, /) -> Logger:
@@ -553,11 +667,13 @@ class MyBot:
 
 
     def _report_scheduler_target(
-        self, sleep: int, tz: str = "Europe/Rome", master_sleep: int = 10
+        self, scheduler: Scheduler, sleep: int, tz: str = "Europe/Rome",
+        master_sleep: int = 10
     ) -> None:
         """Keep trying to send new reports.
 
         Parameters:
+        - scheduler: scheduler that uses this target
         - sleep: sleeping time in seconds between consecutive reports
                  sending attempts
         - tz: timestamps timezone
@@ -573,12 +689,7 @@ class MyBot:
         # previous reports sending attempt
         previous: pd.Timestamp = None
 
-        while True:
-
-            # bot object wants to stop the thread
-            if self._stop_report_scheduler:
-                self._logger.info("Stopping report scheduler")
-                return
+        while not scheduler.stop_target:
 
             # this is not the first iteration => master sleep
             if previous != None:
@@ -601,7 +712,7 @@ class MyBot:
             if T0 < T and T0 < now and now < T \
             or T0 > T and (T0 < now or now < T):
                 self._logger.debug(
-                    f"Report scheduler respects \"do not disturb\""
+                    f"Report scheduler target respects \"do not disturb\""
                 )
                 continue
 
@@ -655,30 +766,37 @@ class MyBot:
                         )
 
 
-    def _start_report_scheduler(
-        self, sleep: int = 30*60, tz: str = "Europe/Rome"
-    ) -> Thread:
-        """Start report sender scheduler in a separate thread.
+    def start(self):
+        """Start bot and report scheduler."""
 
-        Parameters:
-        - sleep: sleeping time between scheduler iterations in seconds
-        - tz: timestamps timezone
+        self._updater.start_polling()
+        self._report_scheduler.start()
 
-        Returns:
-        - started thread
-        """
+        self._logger.info("Bot started")
 
-        self._logger.debug(
-            f"Starting report scheduler: sleep = {sleep}, tz = \"{tz}\""
-        )
+        # block main thread until bot runs
+        self._updater.idle()
 
-        thread = Thread(target=self._report_scheduler_target, args=(sleep, tz))
-        self._logger.debug(f"Report scheduler created: {thread}")
+        # safe exit
+        self.stop()
 
-        thread.start()
-        self._logger.info("Report scheduler started")
 
-        return thread
+    def stop(self):
+        """Stop bot and report scheduler."""
+
+        # stop report scheduler
+        if self._report_scheduler.is_alive():
+            self._report_scheduler.stop()
+        else:
+            self._logger.debug("No running report scheduler to stop")
+
+        # stop bot
+        if self._updater.running:
+            self._updater.stop()
+        else:
+            self._logger.debug("No updater to stop")
+
+        self._logger.info("Bot stopped")
 
 
     def __init__(self, token: str, /, data: Optional[Dict[str,Path]] = None):
@@ -699,6 +817,8 @@ class MyBot:
 
         self._logger.debug(f"Data: {self._data}")
 
+        # databases
+
         self._db = {
             module: eval(module).Database()
             for module in ["contagions", "vaccines"]
@@ -708,7 +828,9 @@ class MyBot:
 
         self._update_regions_answers()
 
-        # build bot
+        # bot
+
+        self._logger.debug(f"Using token \"{token}\"")
 
         self._updater = Updater(
             token=token,
@@ -756,37 +878,20 @@ class MyBot:
             list(self._commands_descriptions.items())
         )
 
-        # start bot
-        self._updater.start_polling()
-        self._logger.info(f"Bot started (token: \"{token}\")")
-
-        # start report scheduler
-        self._report_scheduler = self._start_report_scheduler()
+        # report scheduler
+        self._report_scheduler = Scheduler(
+            target = self._report_scheduler_target,
+            kwargs = {"sleep": 30*60, "tz": "Europe/Rome"}
+        )
 
 
     def __del__(self):
-        """Stop bot and report scheduler."""
+        """Stop the bot on deletion"""
 
-        if self._report_scheduler == None:
-            self._logger.debug("No running report scheduler to stop")
+        self._logger.debug("Deleting bot")
 
-        # stop report scheduler
-        else:
-            self._stop_report_scheduler = True
-            timeout = 120
-
-            self._logger.debug(f"Waiting {timeout} seconds thread termination")
-
-            self._report_scheduler.join(timeout=timeout)
-
-            if self._report_scheduler.is_alive():
-                self._logger.warning("Thread is still running")
-
-        # stop bot
         try:
-            self._updater.stop()
-            self._logger.info("Bot stopped")
+            self.stop()
         except:
-            self._logger.warning(
-                "Unable to safely stop bot on object deletion"
-            )
+            self._logger.error("Unable to stop safely")
+            self._logger.error(traceback.format_exc())
