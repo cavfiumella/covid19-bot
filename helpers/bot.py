@@ -247,7 +247,7 @@ class MyBot:
             raise ValueError("path and text are None")
 
         if path != None:
-            with open(path) as file:
+            with path.open() as file:
                 text = file.read()
 
             if path.name.split(".")[-1] == "md":
