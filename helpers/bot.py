@@ -192,12 +192,7 @@ class MyBot:
 
         self._get_chat_logger(chat.id).debug("/help command")
 
-        text = "I comandi disponibili sono:\n\n"
-
-        for command, description in self._commands_descriptions.items():
-            text += f"- /{command}: {description}\n"
-
-        self._send_message(chat.id, text=text)
+        self._send_message(chat.id, path=self._data["msg"].joinpath("help.md"))
 
 
     def _set_reports(
