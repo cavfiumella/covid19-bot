@@ -48,4 +48,4 @@ if __name__ == "__main__":
     try:
         main(args.token)
     except:
-        LOGGER.critical(format_exc())
+        LOGGER.error(format_exc())
