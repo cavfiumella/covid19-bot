@@ -100,7 +100,7 @@ class BaseDatabase:
         - additional args: keys of files to update.
         """
 
-        self._logger.info("Updating database")
+        self._logger.debug("Updating database")
 
         if not self._local["dir"].exists():
             os.mkdir(self._local["dir"])
