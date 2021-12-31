@@ -1,0 +1,280 @@
+#!/usr/bin/env python3.9
+
+"""Admin console for Telegram BOT defined in helpers.bot module.
+
+Available options can be printed calling
+    ./console [-h|--help]
+
+Available console commands can be printed after starting with (h | help).
+"""
+
+
+from _version import get_version
+from helpers.bot import MyBot
+
+from argparse import ArgumentParser
+import logging
+from traceback import format_exc
+import sys
+from typing import Dict, Optional, Any
+from pathlib import Path
+import pickle as pkl
+import json
+
+
+def print_console_help(commands: Dict[str,str], /) -> None:
+    """Prints console commands available and their descriptions.
+
+    Parameters:
+    - commands: commands and their description
+    """
+
+    print("Available commands:")
+
+    for cmd, desc in commands.items():
+        print(f"\t{cmd}: {desc}")
+
+
+def start(
+    mybot: Optional[MyBot] = None, token: Optional[str] = None,
+    test: bool = False
+) -> MyBot:
+    """Start bot.
+
+    Parameters:
+    - mybot: Telegram bot to starts, if None a new bot is created
+    - token: Telegram API token
+    - test: run in test mode
+
+    Returns:
+    updated mybot and token
+    """
+
+    if token == None:
+        token = input("Token: ")
+
+    if test:
+        # ignore mybot argument and use a new bot
+        mybot = MyBot(token, persistence=False)
+    elif mybot == None:
+        mybot = MyBot(token)
+
+    mybot.start() # blocks main thread until bot runs
+
+    return mybot, token
+
+
+def read_persistence(path: Path) -> dict:
+    """Read persistence from file.
+
+    Parameters:
+    - path: path to bot's persistence file
+
+    Returns:
+    data read from persistence file
+    """
+
+    with path.open("rb") as file:
+        data = pkl.load(file)
+
+    return data
+
+
+def write_persistence(obj: Any, path: Path) -> None:
+    """Write object on pickle file.
+
+    Parameters:
+    - obj: object to write
+    - path: path to pickle file
+    """
+
+    with path.open("wb") as file:
+        pkl.dump(obj, file)
+
+
+def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
+    """Parameters:
+    - cmd: first command to use, if None prompt input
+    - token: Telegram API token, if None will be requested when needed
+
+    Returns:
+    exit code
+    """
+
+    commands = {
+        "h | help": "prints help message",
+        "s | start": "start Telegram bot",
+        "t | test": "start bot in test mode",
+        "A | announce": "send an announce to all users",
+        "r | read <path>": "read bot's presistence file",
+        "N | new <path> <data to edit> <id>": "insert new data in persistence "
+                                              "file (DANGER ZONE)",
+        "D | delete <path> <data to edit> <id>": "delete data from persistence "
+                                                 "file (DANGER ZONE)",
+        "E | edit <path> <data to edit> <id>": "edit data in persistence file "
+                                               "(DANGER ZONE)",
+        "X | exec": "execute Python code (DANGER ZONE)",
+        "q | quit": "quit"
+    }
+
+    mybot: MyBot = None
+
+    while True:
+
+        if cmd == None:
+            cmd = input("\nCommand: ")
+
+        # parse cmd
+        cmd = cmd.split()
+
+        # catch uncaught exceptions
+        try:
+
+            if cmd[0] in ["help", "h"]:
+                print_console_help(commands)
+
+            elif cmd[0] in ["start", "s"]:
+                print("Running bot...")
+                mybot, token = start(mybot, token)
+
+            elif cmd[0] in ["test", "t"]:
+                print("Running bot in test mode...")
+                start(mybot, token, test=True)
+
+            elif cmd[0] in ["read", "r"]:
+                path = Path(cmd[1])
+                data = read_persistence(path)
+                print(json.dumps(data, indent=4))
+
+            elif cmd[0] in ["new", "N"]:
+                path = Path(cmd[1])
+                data = read_persistence(path)
+                data_to_edit = cmd[2]
+
+                if data_to_edit not in data:
+                    raise KeyError(data_to_edit)
+
+                id = input("\nKey: ")
+                value = eval(input("Value: "))
+
+                data[data_to_edit].update({id: value})
+
+                print("\nNew data:")
+                print(f"{id}: {value}")
+
+                confirm = input("\nSave changes? (y/N): ")
+
+                if confirm in ["y", "Y", "yes"]:
+                    write_persistence(data, path)
+                    print("Changes saved.")
+                else:
+                    print("Changes dismissed.")
+
+            elif cmd[0] in ["delete", "D"]:
+                path = Path(cmd[1])
+                data = read_persistence(path)
+                data_to_edit = cmd[2]
+                id = int(cmd[3])
+
+                if data_to_edit not in data:
+                    raise KeyError(data_to_edit)
+
+                if id not in data[data_to_edit]:
+                    raise KeyError(id)
+
+                print(f"\nDeleted data:")
+                print(data[data_to_edit].pop(id))
+
+                confirm = input("\nSave changes? (y/N): ")
+
+                if confirm in ["y", "Y", "yes"]:
+                    write_persistence(data, path)
+                    print("Changes saved.")
+                else:
+                    print("Changes dismissed.")
+
+            elif cmd[0] in ["edit", "E"]:
+                path = Path(cmd[1])
+                data = read_persistence(path)
+                data_to_edit = cmd[2]
+                id = int(cmd[3])
+
+                if data_to_edit not in data:
+                    raise KeyError(data_to_edit)
+
+                if id not in data[data_to_edit]:
+                    raise KeyError(id)
+
+                print(f"\n{data_to_edit}[{id}]:")
+                print(json.dumps(data[data_to_edit][id], indent=4))
+
+                while True:
+                    key = input("\nKey: ")
+                    if key == "":
+                        break
+                    data[data_to_edit][id].update(
+                        {key: eval(input(f"Value: "))}
+                    )
+
+                print("\nEdited data:")
+                print(json.dumps(data[data_to_edit][id], indent=4))
+
+                confirm = input("\nSave changes? (y/N): ")
+
+                if confirm in ["y", "Y", "yes"]:
+                    write_persistence(data, path)
+                    print("Changes saved.")
+                else:
+                    print("Changes dismissed.")
+
+            elif cmd[0] in ["exec", "X"]:
+                exec(input("Code: "))
+
+            elif cmd[0] in ["quit", "q"]:
+                return 0
+
+            else:
+                print("Command not recognized.", file=sys.stderr)
+                print()
+                print_console_help(commands)
+
+        except:
+            print("Uncaught exception:", file=sys.stderr)
+            print(format_exc(), file=sys.stderr)
+
+        # reset cmd
+        cmd = None
+
+
+if __name__ == "__main__":
+
+    parser = ArgumentParser()
+
+    # options
+    parser.add_argument(
+        "-s", "--start", action="store_true",
+        help="Start bot without prompting console"
+    )
+    parser.add_argument("-t", "--token", type=str, help="Telegram API token")
+    parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("-v", "--version", action="store_true")
+
+    args = parser.parse_args()
+    log_level = logging.INFO
+    cmd = None
+
+    if args.debug:
+        log_level = logging.DEBUG
+
+    logging.basicConfig(
+        format="%(asctime)s %(name)s: %(message)s", level=log_level
+    )
+
+    if args.start:
+        cmd = "start"
+
+    if args.version:
+        print(f"Version {get_version()}")
+        sys.exit()
+
+    sys.exit(console(cmd, args.token))

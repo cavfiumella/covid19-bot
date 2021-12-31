@@ -798,7 +798,7 @@ class MyBot:
 
     def __init__(
         self, token: str, msg_dir: Optional[Path] = None,
-        pkl_path: Optional[Path] = None
+        pkl_path: Optional[Path] = None, persistence: bool = True
     ):
         """Build and start the bot.
 
@@ -806,6 +806,7 @@ class MyBot:
         - token: Telegram API token
         - msg_dir: dir to messages files
         - pkl_path: path to persistence file
+        - persistence: make bot persistent
         """
 
         self._logger = getLogger(str(self))
@@ -835,8 +836,9 @@ class MyBot:
         self._logger.debug(f"Using token \"{token}\"")
 
         self._updater = Updater(
-            token=token,
-            persistence=PicklePersistence(filename=self._pkl_path)
+            token = token,
+            persistence = PicklePersistence(filename=self._pkl_path) \
+                          if persistence else None
         )
 
         # subscribe to reports handler
