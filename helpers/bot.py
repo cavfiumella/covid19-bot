@@ -599,8 +599,12 @@ class MyBot:
             previous = now
 
             # do not disturb
-            if now > pd.Timestamp(self._report_do_not_disturb[0], tz=tz) \
-            or now < pd.Timestamp(self._report_do_not_disturb[1], tz=tz):
+            T0, T = tuple(map(
+                lambda t: pd.Timestamp(t, tz=tz), self._report_do_not_disturb
+            ))
+
+            if T0 < T and T0 < now and now < T \
+            or T0 > T and (T0 < now or now < T):
                 self._logger.debug(
                     f"Report scheduler respects \"do not disturb\""
                 )
