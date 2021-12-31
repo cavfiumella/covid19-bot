@@ -170,11 +170,8 @@ class MyBot:
     _updater: Updater = None
 
     # data files locations
-    _data: Dict[str, Path] = {
-        "dir": Path("share"),
-        "msg": Path("share/msg"),
-        "pkl": Path("share/bot.pkl")
-    }
+    _msg_dir: Path = Path("share/msg")
+    _pkl_path: Path = Path("share/bot.pkl")
 
     # available commands; (command, description) pairs
     _commands_descriptions: Dict[str, str] = {
@@ -292,7 +289,7 @@ class MyBot:
             fmt = (user.username,)
 
         self._send_message(
-            chat.id, path=self._data["msg"].joinpath("start.md"), fmt=fmt
+            chat.id, path=self._msg_dir.joinpath("start.md"), fmt=fmt
         )
 
 
@@ -306,7 +303,7 @@ class MyBot:
 
         self._get_chat_logger(chat.id).debug("/help command")
 
-        self._send_message(chat.id, path=self._data["msg"].joinpath("help.md"))
+        self._send_message(chat.id, path=self._msg_dir.joinpath("help.md"))
 
 
     def _set_reports(
@@ -358,7 +355,7 @@ class MyBot:
                 f"Report settings: {context.chat_data}"
             )
             self._send_message(
-                chat.id, path=self._data["msg"].joinpath("setting_end.md"),
+                chat.id, path=self._msg_dir.joinpath("setting_end.md"),
                 reply_markup=ReplyKeyboardRemove()
             )
 
@@ -366,7 +363,7 @@ class MyBot:
 
         # ask question
         self._send_message(
-            chat.id, path=self._data["msg"].joinpath(f"{setting}_setting.md"),
+            chat.id, path=self._msg_dir.joinpath(f"{setting}_setting.md"),
             reply_markup=ReplyKeyboardMarkup(
                 np.array(self._report_settings[setting]).reshape(-1,1),
                 one_time_keyboard=True
@@ -404,13 +401,13 @@ class MyBot:
         )
 
         self._send_message(
-            chat.id, path=self._data["msg"].joinpath("cancel_setting.md"),
+            chat.id, path=self._msg_dir.joinpath("cancel_setting.md"),
             reply_markup=ReplyKeyboardRemove()
         )
 
         if invalid_setting:
             self._send_message(
-                chat.id, path=self._data["msg"].joinpath("invalid_setting.txt"),
+                chat.id, path=self._msg_dir.joinpath("invalid_setting.txt"),
                 fmt=(update.message.text,), reply_markup=ReplyKeyboardRemove()
             )
 
@@ -432,7 +429,7 @@ class MyBot:
         self._get_chat_logger(chat.id).info("Reports disabled")
 
         self._send_message(
-            chat.id, path=self._data["msg"].joinpath("disable_reports.md")
+            chat.id, path=self._msg_dir.joinpath("disable_reports.md")
         )
 
 
@@ -453,12 +450,12 @@ class MyBot:
         if settings == {}:
             self._send_message(
                 chat.id,
-                path=self._data["msg"].joinpath("disabled_report_status.md")
+                path=self._msg_dir.joinpath("disabled_report_status.md")
             )
             return
 
         self._send_message(
-            chat.id, path=self._data["msg"].joinpath("active_report_status.md"),
+            chat.id, path=self._msg_dir.joinpath("active_report_status.md"),
             fmt=(
                 settings.get(key)
                 for key in [
@@ -480,7 +477,7 @@ class MyBot:
         self._get_chat_logger(chat.id).debug("/bug command")
 
         self._send_message(
-            chat.id, path=self._data["msg"].joinpath("report_bug.md")
+            chat.id, path=self._msg_dir.joinpath("report_bug.md")
         )
 
 
@@ -495,7 +492,7 @@ class MyBot:
         self._get_chat_logger(chat.id).debug("/feedback command")
 
         self._send_message(
-            chat.id, path=self._data["msg"].joinpath("feedback.md")
+            chat.id, path=self._msg_dir.joinpath("feedback.md")
         )
 
 
@@ -799,23 +796,28 @@ class MyBot:
         self._logger.info("Bot stopped")
 
 
-    def __init__(self, token: str, /, data: Optional[Dict[str,Path]] = None):
+    def __init__(
+        self, token: str, msg_dir: Optional[Path] = None,
+        pkl_path: Optional[Path] = None
+    ):
         """Build and start the bot.
 
         Parameters:
         - token: Telegram API token
-        - data: dict containing paths to mybot data;
-                data must contain the same keys given by MyBot._data
+        - msg_dir: dir to messages files
+        - pkl_path: path to persistence file
         """
 
         self._logger = getLogger(str(self))
 
-        if data != None:
-            if data.keys() != MyBot._data.keys():
-                raise ValueError("invalid data parameter")
-            self._data = data
+        for var in ["msg_dir", "pkl_path"]:
+            if eval(var) != None:
+                exec(f"self._{var} = {var}")
 
-        self._logger.debug(f"Data: {self._data}")
+        self._logger.debug(
+            f"Bot created: msg_dir = \"{self._msg_dir}\", pkl_path = "
+            f"\"{self._pkl_path}\""
+        )
 
         # databases
 
@@ -834,7 +836,7 @@ class MyBot:
 
         self._updater = Updater(
             token=token,
-            persistence=PicklePersistence(filename=self._data["pkl"])
+            persistence=PicklePersistence(filename=self._pkl_path)
         )
 
         # subscribe to reports handler
