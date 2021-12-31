@@ -5,27 +5,51 @@
 
 Il bot è stato rilasciato ed è contattabile a questo [link](https://t.me/cavfiumella_covid19_bot).
 
-E' possibile ricevere aggiornamenti sui contagi e sulle vaccinazioni da Covid-19.
+### Comandi
+Il bot permette di ricevere aggiornamenti sui contagi e sulle vaccinazioni da Covid-19 in Italia.
+
+I comandi disponibili sono i seguenti:
+- `/start` stampa un messaggio di benvenuto all'avvio del bot,
+- `/help` stampa un elenco dei comandi disponibile con una breve descrizione sul loro uso,
+- `/imposta_report` avvia una conversazione con cui impostare la ricezione degli aggiornamenti,
+- `/disattiva_report` disattiva gli aggiornamenti,
+- `/stato_report` visualizza le impostazioni attuali,
+- `/bug` stampa un messaggio con i riferimenti per la segnalazione di un errore,
+- `/feedback` stampa un messaggio con i riferimenti per lasciare un suggerimento.
 
 ### Report
-Gli aggiornamenti vengono inviati **tra le 10:00 e le 21:00** in base alla disponibilità dei dati.
-I report vengono generati e inviati in un **unico messaggio** in modo da ridurre il numero di notifiche giornaliere a 1.
-Se anche solo alcuni dei dati sono mancanti, il bot non invia il report fino a che il dataset non è completo.
 
-I report possono essere generati **giornalmente, settimanalmente (questa è la _frequenza consigliata_) e mensilmente**.
-Le variabili utilizzate nei report sono le stesse per tutti e dipendono dalle fonti scelte.
-I **dati disponibili** sono quelli nazionali e regionali per contagi e vaccinazioni.
+#### Impostazioni
+Eseguito il comando `/imposta_report` all'utente viene chiesto di impostare le seguenti impostazioni:
+- **frequenza degli aggiornamenti**,
+- ricezione degli aggiornamenti sui **contagi in Italia**,
+- ricezione degli aggiornamenti sui **contagi in una regione**,
+- ricezione degli aggiornamenti sulle **vaccinazioni in Italia**,
+- ricezione degli aggiornamenti sulle **vaccinazioni in una regione**.
 
+Le frequenze di aggiornamento tra cui scegliere sono:
+- **giornaliera**
+- **settimanale**
+- **mensile**.
 
-Per ogni variabile presa in considerazione nei dati vengono generati i **seguenti valori**:
-- **_totale_**: valore complessivo della variabile nel periodo di riferimento (i.e. giorno, settimana, mese rispettivamente per frequenza giornaliera, settimanale e mensile);
-- **_media_**: valore medio giornaliero della variabile calcolato nel periodo di riferimento;
-- **_dev std_**: deviazione standard della variabile calcolata nel periodo di riferimento;
-- **_var pct_**: variazione percentuale del valore medio giornaliero rispetto al periodo precedente (e.g. in un report mensile la variazione percentuale viene calcolata considerando la media del mese precedente a quello del report generato).
+#### Modalità di invio
+I report vengono inviati in un **unico messaggio** per ridurre il numero giornaliero di notifiche.
+Se una parte dei dati richiesti sono mancanti il bot non invia il report fino a che i dataset non sono completi.
+I dati sui contagi vengono caricati tra le 17:00 e le 18:00 del giorno di riferimento mentre i dati sulle vaccinazioni intorno alle 05:00.
+Il bot prevede una modalità automatica di **non disturbare** che impedisce l'invio di messaggi agli utenti **tra le 21:00 e le 10:00**.
+Se quindi l'utente sceglie di ricevere aggiornamenti su contagi e vaccinazioni e la frequenza è giornaliera, i report verranno inviati il giorno successivo a quello di riferimento; diversamente, se solo i contagi sono attivi il report viene consegnato la sera stessa.
 
-### Riferimenti
+#### Valori del report
+Gli aggiornamenti riportano una serie di valori comuni a tutti i report e che dipendono solo dalle fonti scelte: contagi e vaccini.
+Per ogni variabile vengono generati i seguenti valori calcolati nel periodo di riferimento (i.e. giorno, settimana o mese in base alla frequenza del report):
+- **totale**, valore complessivo,
+- **media**, valore medio giornaliero, che corrisponde al valore assoluto per la frequenza giornaliera,
+- **dev std**, deviazione standard, mancante nei report giornalieri,
+- **var pct**, variazione percentuale della media giornaliera rispetto al periodo precedente; e.g. per un report mensile la variazione considera la media del mese precedente e quella del mese di riferimento.
+
+### Ulteriori riferimenti
 Per **ulteriori informazioni** non esitare a scrivere in [Q&A](https://github.com/cavfiumella/covid19-bot/discussions/categories/q-a).
 
-**Aggiornamenti** sui rilasci e le funzionalità vengono pubblicati nella sezione [Annunci](https://github.com/cavfiumella/covid19-bot/discussions/categories/annunci).
+**Aggiornamenti** sulle nuove versioni e sulle nuove funzionalità vengono pubblicati nella sezione [annunci](https://github.com/cavfiumella/covid19-bot/discussions/categories/annunci).
 
-Gli **errori** sono tracciati alla pagina [issues](https://github.com/cavfiumella/covid19-bot/issues).
+I **bug** scoperti sono tracciati alla pagina [issues](https://github.com/cavfiumella/covid19-bot/issues).
