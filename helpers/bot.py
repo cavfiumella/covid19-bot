@@ -275,12 +275,8 @@ class MyBot:
         user = update.effective_user
         chat = update.effective_chat
 
-        self._get_chat_logger(chat.id).info(
-            f"User @{user.username} (id: {user.id}, chat id: {chat.id}) starts "
-            "the bot"
-        )
-
         self._get_chat_logger(chat.id).debug("/start command")
+        self._get_chat_logger(chat.id).info(f"New chat {chat.id}")
 
         if user.first_name != None and user.first_name != "":
             fmt = (user.first_name,)
