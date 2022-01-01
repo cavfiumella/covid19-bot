@@ -1,6 +1,5 @@
 
-from .database import BaseDatabase
-from . import contagions, vaccines
+from .database import BaseDatabase, Contagions, Vaccines
 from .bot import MyBot
 
 from logging import getLogger, Logger
@@ -556,7 +555,7 @@ class Reporter(Scheduler):
         self._db = {}
 
         for key in ["contagions", "vaccines"]:
-            self._db[key] = eval(f"{key}.Database()")
+            self._db[key] = eval(f"{key.capitalize()}()")
 
         for var in ["tz", "do_not_disturb"]:
             if eval(var) != None:

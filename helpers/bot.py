@@ -2,7 +2,7 @@
 """Telegram BOT sending Covid-19 updates."""
 
 
-from . import contagions, vaccines
+from .database import Contagions, Vaccines
 
 from logging import getLogger, Logger
 from typing import Dict, List, Tuple, Any, Optional, Union
@@ -499,7 +499,7 @@ class MyBot:
         # databases
 
         self._db = {
-            module: eval(module).Database()
+            module: eval(f"{module.capitalize()}()")
             for module in ["contagions", "vaccines"]
         }
 
