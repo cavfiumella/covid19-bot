@@ -203,7 +203,7 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
                     raise KeyError(data_to_edit)
 
                 id = input("\nKey: ")
-                value = eval(input("Value: "))
+                value = eval(input("Value (evaluable code): "))
 
                 data[data_to_edit].update({id: value})
 
@@ -261,7 +261,7 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
                     if key == "":
                         break
                     data[data_to_edit][id].update(
-                        {key: eval(input(f"Value: "))}
+                        {key: eval(input("Value (evaluable code): "))}
                     )
 
                 print("\nEdited data:")
