@@ -16,6 +16,7 @@ from telegram import (
 )
 from telegram.ext import (
     Updater,
+    Dispatcher,
     CallbackContext,
     CommandHandler,
     PicklePersistence,
@@ -49,6 +50,7 @@ class MyBot:
     _db: Dict[str, BaseDatabase] = None
 
     _updater: Updater = None
+    _dispatcher: Dispatcher = None
 
     # data files locations
     _msg_dir: Path = Path("share/msg")
@@ -119,7 +121,7 @@ class MyBot:
         if fmt != None:
             text = text.format(*fmt)
 
-        self._updater.dispatcher.bot.send_message(
+        self._dispatcher.bot.send_message(
             chat_id=chat_id, parse_mode=parse_mode, text=text, **kwargs
         )
 
@@ -429,7 +431,7 @@ class MyBot:
                    returned
         """
 
-        data = self._updater.dispatcher.chat_data.copy()
+        data = self._dispatcher.chat_data.copy()
 
         if chat_id != None:
             data = data[chat_id]
@@ -449,7 +451,7 @@ class MyBot:
         defaultdict.update is called and persistent file is updated.
         """
 
-        data = self._updater.dispatcher.chat_data
+        data = self._dispatcher.chat_data
 
         self._logger.debug(
             "chat_data update BEFORE:" + \
@@ -462,7 +464,7 @@ class MyBot:
             data = data[chat_id]
 
         data.update(up)
-        self._updater.dispatcher.update_persistence()
+        self._dispatcher.update_persistence()
 
         self._logger.debug(
             "chat_data update AFTER:" + \
@@ -516,9 +518,10 @@ class MyBot:
             persistence = PicklePersistence(filename=self._pkl_path) \
                           if persistence else None
         )
+        self._dispatcher = self._updater.dispatcher
 
         # subscribe to reports handler
-        self._updater.dispatcher.add_handler(ConversationHandler(
+        self._dispatcher.add_handler(ConversationHandler(
             entry_points=[CommandHandler("imposta_report", self._set_reports)],
             states = {
                 setting: [
@@ -545,16 +548,14 @@ class MyBot:
             "bug": self._report_bug,
             "feedback": self._feedback
         }.items():
-            self._updater.dispatcher.add_handler(CommandHandler(
-                command, callback
-            ))
+            self._dispatcher.add_handler(CommandHandler(command, callback))
 
         # easter eggs handler
-        self._updater.dispatcher.add_handler(MessageHandler(
+        self._dispatcher.add_handler(MessageHandler(
             Filters.text(["Chi è il tuo padrone?"]), self._easter_eggs
         ))
 
-        self._updater.dispatcher.bot.set_my_commands(
+        self._dispatcher.bot.set_my_commands(
             list(self._commands_descriptions.items())
         )
 
