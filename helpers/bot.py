@@ -23,6 +23,7 @@ from telegram.ext import (
     ConversationHandler,
     MessageHandler
 )
+from telegram.error import ChatMigrated
 from telegram.ext.filters import Filters
 import pandas as pd
 import numpy as np
@@ -83,6 +84,29 @@ class MyBot:
         return getLogger(f"{self}.chat_{chat_id}")
 
 
+    def _migrate_chat_data():
+        """Migrate chat data from old id to new id.
+
+        Parameters:
+        - old_id: old chat id
+        - new_id: new chat id
+        """
+
+        self._logger.debug(f"Migrating chat data: {old_id} --> {new_id}")
+
+        # transfer data
+        self._dispatcher.chat_data[new_id].update(
+            self._dispatcher.chat_data[old_id]
+        )
+        del self._dispatcher.chat_data[old_id]
+
+        self._logger.debug(
+            "Chat data migrated:"
+            f"\nold: {json.dumps(self._dispatcher.chat_data[old_id], indent=4)}"
+            f"\nnew: {json.dumps(self._dispatcher.chat_data[new_id], indent=4)}"
+        )
+
+
     def send_message(
         self, chat_id: int, /, parse_mode: str = "html",
         path: Optional[Path] = None, text: Optional[str] = None,
@@ -121,9 +145,23 @@ class MyBot:
         if fmt != None:
             text = text.format(*fmt)
 
-        self._dispatcher.bot.send_message(
-            chat_id=chat_id, parse_mode=parse_mode, text=text, **kwargs
-        )
+        try:
+            self._dispatcher.bot.send_message(
+                chat_id=chat_id, parse_mode=parse_mode, text=text, **kwargs
+            )
+        except ChatMigrated as ex:
+            self.get_chat_logger(chat_id).debug("ChatMigration error")
+
+            self._migrate_chat_data(chat_id, ex.new_chat_id)
+
+            self.get_chat_logger(chat_id).info(
+                f"Chat migration: {chat_id} --> {ex.new_chat_id}"
+            )
+
+            self._dispatcher.bot.send_message(
+                chat_id=ex.new_chat_id, parse_mode=parse_mode, text=text,
+                **kwargs
+            )
 
         self.get_chat_logger(chat_id).debug(
             f"Sent message: parse_mode = \"{parse_mode}\", text = \"{text}\""
@@ -396,6 +434,28 @@ class MyBot:
             )
 
 
+    def _chat_migration(
+        self, update: Update, context: CallbackContext
+    ) -> None:
+        """Handle chat migration updates. These updates are generally sent when
+        a group becomes a supergroup.
+        This method calls MyBot._migrate_chat_data to transfer chat_data to the
+        new id.
+        """
+
+        self.get_chat_logger(old_id).debug("Chat migration update received")
+
+        msg = update.message
+        old_id = msg.migrate_from_chat_id or msg.chat_id
+        new_id = msg.migrate_to_chat_id or msg.chat_id
+
+        self._migrate_chat_data(old_id, new_id)
+
+        self.get_chat_logger(old_id).info(
+            f"Chat migration: {old_id} --> {new_id}"
+        )
+
+
     def start(self):
         """Start bot updater."""
 
@@ -538,6 +598,10 @@ class MyBot:
                 for setting in self._report_settings.keys()
             },
             fallbacks = [CommandHandler("annulla", self._cancel_set_reports)]
+        ))
+
+        self._dispatcher.add_handler(MessageHandler(
+            Filters.status_update.migrate, self._chat_migration
         ))
 
         for command, callback in {
