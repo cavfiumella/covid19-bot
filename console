@@ -118,7 +118,7 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
     commands = {
         "h | help": "prints help message",
         "s | start": "start Telegram bot",
-        "t | test": "start bot in test mode",
+        "T | test": "start bot in test mode",
         "A | announce": "send an announce to all users",
         "r | read <path>": "read bot's presistence file",
         "N | new <path> <data to edit> <id>": "insert new data in persistence "
@@ -157,7 +157,7 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
                 print("Running bot...")
                 mybot, token, reporter = start(db, mybot, token, reporter)
 
-            elif cmd[0] in ["test", "t"]:
+            elif cmd[0] in ["test", "T"]:
                 print("Running bot in test mode...")
                 start(db, mybot, token, reporter, test=True)
 
@@ -275,6 +275,10 @@ if __name__ == "__main__":
         "-s", "--start", action="store_true",
         help="Start bot without prompting console"
     )
+    parser.add_argument(
+        "-T", "--test", action="store_true",
+        help="Start bot in test mode without prompting console"
+    )
     parser.add_argument("-t", "--token", type=str, help="Telegram API token")
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("-v", "--version", action="store_true")
@@ -292,6 +296,9 @@ if __name__ == "__main__":
 
     if args.start:
         cmd = "start"
+
+    if args.test:
+        cmd = "test"
 
     if args.version:
         print(f"Version {get_version()}")
