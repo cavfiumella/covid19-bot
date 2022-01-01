@@ -2,7 +2,7 @@
 """Telegram BOT sending Covid-19 updates."""
 
 
-from .database import Contagions, Vaccines
+from .database import BaseDatabase, Contagions, Vaccines
 
 from logging import getLogger, Logger
 from typing import Dict, List, Tuple, Any, Optional, Union
@@ -45,8 +45,8 @@ class MyBot:
     # object logger
     _logger: Logger = None
 
-    # databases objects
-    _db: Dict[str, object] = None
+    # databases
+    _db: Dict[str, BaseDatabase] = None
 
     _updater: Updater = None
 
@@ -473,12 +473,14 @@ class MyBot:
 
 
     def __init__(
-        self, token: str, msg_dir: Optional[Path] = None,
-        pkl_path: Optional[Path] = None, persistence: bool = True
+        self, token: str, db: Optional[Dict[str, BaseDatabase]] = None,
+        msg_dir: Optional[Path] = None, pkl_path: Optional[Path] = None,
+        persistence: bool = True,
     ):
         """Build and start the bot.
 
         Parameters:
+        - db: databases objects
         - token: Telegram API token
         - msg_dir: dir to messages files
         - pkl_path: path to persistence file
@@ -487,23 +489,21 @@ class MyBot:
 
         self._logger = getLogger(str(self))
 
-        for var in ["msg_dir", "pkl_path"]:
+        for var in ["msg_dir", "pkl_path", "db"]:
             if eval(var) != None:
                 exec(f"self._{var} = {var}")
 
-        self._logger.debug(
-            f"Bot created: msg_dir = \"{self._msg_dir}\", pkl_path = "
-            f"\"{self._pkl_path}\""
-        )
-
         # databases
+        if db == None:
+            self._db = {
+                key: eval(f"{key.capitalize}()")
+                for key in ["contagions", "vaccines"]
+            }
 
-        self._db = {
-            module: eval(f"{module.capitalize()}()")
-            for module in ["contagions", "vaccines"]
-        }
-
-        self._logger.debug(f"Databases: {self._db}")
+        self._logger.debug(
+            f"Bot created: msg_dir = \"{self._msg_dir}\", "
+            f"pkl_path = \"{self._pkl_path}\", db = \"{self._db}\""
+        )
 
         self._update_regions_answers()
 

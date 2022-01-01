@@ -10,6 +10,7 @@ Available console commands can be printed after starting with (h | help).
 
 
 from _version import get_version
+from helpers.database import BaseDatabase, Contagions, Vaccines
 from helpers.bot import MyBot
 from helpers.report import Reporter
 
@@ -37,12 +38,14 @@ def print_console_help(commands: Dict[str,str], /) -> None:
 
 
 def start(
-    mybot: Optional[MyBot] = None, token: Optional[str] = None,
-    reporter: Optional[Reporter] = None, test: bool = False
+    db: Dict[str, BaseDatabase], mybot: Optional[MyBot] = None,
+    token: Optional[str] = None, reporter: Optional[Reporter] = None,
+    test: bool = False
 ) -> (MyBot, str, Reporter):
     """Start bot and reporter.
 
     Parameters:
+    - db: databases objects as a dict (i.e. {key: db})
     - mybot: Telegram bot to starts, if None a new one is created
     - token: Telegram API token
     - reporter: Reporter object to use, if None a new one is created
@@ -57,13 +60,13 @@ def start(
 
     if test:
         # ignore mybot and reporter arguments
-        mybot = MyBot(token, persistence=False)
-        reporter = Reporter(mybot)
+        mybot = MyBot(token, db=db, persistence=False)
+        reporter = Reporter(mybot, db=db)
     else:
         if mybot == None:
-            mybot = MyBot(token)
+            mybot = MyBot(token, db=db)
         if reporter == None:
-            reporter = Reporter(mybot)
+            reporter = Reporter(mybot, db=db)
 
     mybot.start()
     reporter.start()
@@ -128,6 +131,11 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
         "q | quit": "quit"
     }
 
+    db = {
+        key: eval(f"{key.capitalize()}()")
+        for key in ["contagions", "vaccines"]
+    }
+
     mybot: MyBot = None
     reporter: Reporter = None
 
@@ -147,11 +155,11 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
 
             elif cmd[0] in ["start", "s"]:
                 print("Running bot...")
-                mybot, token, reporter = start(mybot, token, reporter)
+                mybot, token, reporter = start(db, mybot, token, reporter)
 
             elif cmd[0] in ["test", "t"]:
                 print("Running bot in test mode...")
-                start(mybot, token, reporter, test=True)
+                start(db, mybot, token, reporter, test=True)
 
             elif cmd[0] in ["read", "r"]:
                 path = Path(cmd[1])

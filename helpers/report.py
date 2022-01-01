@@ -539,8 +539,8 @@ class Reporter(Scheduler):
 
 
     def __init__(
-        self, bot: MyBot, tz: Optional[str] = None,
-        do_not_disturb: Optional[Tuple[str]] = None
+        self, bot: MyBot, db: Optional[Dict[str, BaseDatabase]] = None,
+        tz: Optional[str] = None, do_not_disturb: Optional[Tuple[str]] = None
     ):
         """Parameters:
         - bot: a bot.MyBot object to use to send reports
@@ -552,14 +552,16 @@ class Reporter(Scheduler):
         self._logger = getLogger(str(self))
 
         self._bot = bot
-        self._db = {}
 
-        for key in ["contagions", "vaccines"]:
-            self._db[key] = eval(f"{key.capitalize()}()")
-
-        for var in ["tz", "do_not_disturb"]:
+        for var in ["db", "tz", "do_not_disturb"]:
             if eval(var) != None:
                 exec(f"self._{var} = {var}")
+
+        if db == None:
+            self._db = {
+                key: eval(f"{key.capitalize}()")
+                for key in ["contagions", "vaccines"]
+            }
 
         self._logger.debug(
             f"Reporter created: bot = {self._bot}, db = {self._db}, "
