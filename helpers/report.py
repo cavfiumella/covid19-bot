@@ -569,3 +569,17 @@ class Reporter(Scheduler):
         )
 
         Scheduler.__init__(self, target=self._target)
+
+
+    def start(self) -> None:
+        """Documented in Scheduler.start."""
+
+        Scheduler.start(self)
+        self._logger.info("Reporter started")
+
+
+    def stop(self) -> None:
+        """Documented in Scheduler.start."""
+
+        Scheduler.stop(self)
+        self._logger.info("Reporter stopped")
