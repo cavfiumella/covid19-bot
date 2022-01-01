@@ -11,6 +11,7 @@ Available console commands can be printed after starting with (h | help).
 
 from _version import get_version
 from helpers.bot import MyBot
+from helpers.report import Reporter
 
 from argparse import ArgumentParser
 import logging
@@ -37,31 +38,41 @@ def print_console_help(commands: Dict[str,str], /) -> None:
 
 def start(
     mybot: Optional[MyBot] = None, token: Optional[str] = None,
-    test: bool = False
-) -> MyBot:
-    """Start bot.
+    reporter: Optional[Reporter] = None, test: bool = False
+) -> (MyBot, str, Reporter):
+    """Start bot and reporter.
 
     Parameters:
-    - mybot: Telegram bot to starts, if None a new bot is created
+    - mybot: Telegram bot to starts, if None a new one is created
     - token: Telegram API token
+    - reporter: Reporter object to use, if None a new one is created
     - test: run in test mode
 
     Returns:
-    updated mybot and token
+    updated mybot, token and reporter
     """
 
     if token == None:
         token = input("Token: ")
 
     if test:
-        # ignore mybot argument and use a new bot
+        # ignore mybot and reporter arguments
         mybot = MyBot(token, persistence=False)
-    elif mybot == None:
-        mybot = MyBot(token)
+        reporter = Reporter(mybot)
+    else:
+        if mybot == None:
+            mybot = MyBot(token)
+        if reporter == None:
+            reporter = Reporter(mybot)
 
-    mybot.start() # blocks main thread until bot runs
+    mybot.start()
+    reporter.start()
 
-    return mybot, token
+    mybot.idle() # wait signal that stops bot
+
+    reporter.stop()
+
+    return mybot, token, reporter
 
 
 def read_persistence(path: Path) -> dict:
@@ -118,6 +129,7 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
     }
 
     mybot: MyBot = None
+    reporter: Reporter = None
 
     while True:
 
@@ -135,11 +147,11 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
 
             elif cmd[0] in ["start", "s"]:
                 print("Running bot...")
-                mybot, token = start(mybot, token)
+                mybot, token, reporter = start(mybot, token, reporter)
 
             elif cmd[0] in ["test", "t"]:
                 print("Running bot in test mode...")
-                start(mybot, token, test=True)
+                start(mybot, token, reporter, test=True)
 
             elif cmd[0] in ["read", "r"]:
                 path = Path(cmd[1])

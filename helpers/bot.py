@@ -2,7 +2,6 @@
 """Telegram BOT sending Covid-19 updates."""
 
 
-from .database import Report
 from . import contagions, vaccines
 
 from logging import getLogger, Logger
@@ -27,130 +26,12 @@ from telegram.ext.filters import Filters
 import pandas as pd
 import numpy as np
 from functools import partial
-from threading import Thread
-import threading
-import time
 import traceback
+from collections import defaultdict
+import json
 
 
 LOGGER = getLogger(__name__)
-
-
-class Scheduler:
-    """Scheduler class is a wrapper for threading.Thread class.
-    It adds the functionality to start and stop a target function multiple times
-    creating and deleting a Thread when necessary."""
-
-    _logger: Logger = None
-
-    _thread: Thread = None
-
-    _target = None
-    _args: Tuple = None
-    _kwargs: Dict = None
-
-    stop_target: bool = False
-
-
-    def __init__(self, target, args: Tuple = None, kwargs: Dict = None):
-        """Parameters:
-        - target: a callable that accepts a \"scheduler\" argument of type
-                  Scheduler; this argument is used to tell target functions with
-                  infinite loops to stop when scheduler.stop_target is True;
-        - args: positional arguments to be passed to target
-        - kwargs: keyword arguments to be passed to target
-        """
-
-        if args == None:
-            args = tuple()
-
-        if kwargs == None:
-            kwargs =  {}
-
-        kwargs.update({"scheduler": self})
-
-        self._logger = getLogger(str(self))
-
-        self._target = target
-        self._args = args
-        self._kwargs = kwargs
-
-        self._logger.debug(
-            f"Scheduler created: args = {self._args}, kwargs = {self._kwargs}"
-        )
-
-
-    def start(self) -> None:
-        """Start a new thread with target function."""
-
-        self._thread = Thread(
-            target = self._target, args = self._args,
-            kwargs = self._kwargs
-        )
-
-        self.stop_target = False
-        self._thread.start()
-
-        self._logger.debug("Scheduler started")
-        self._logger.debug(f"Scheduler thread: {self._thread}")
-
-
-    def is_alive(self) -> bool:
-        """Returns True if thread is running."""
-
-        if self._thread != None:
-            alive = self._thread.is_alive()
-        else:
-            alive = False
-
-        self._logger.debug(f"Scheduler thread is alive: {alive}")
-
-        return alive
-
-
-    def stop(self, timeout: int = 120, errors = "ignore") -> None:
-        """Stop thread running thread.
-
-        Parameters:
-        - timeout: wait timeout seconds that thread stops, then kill it
-        - errors: when thread is not alive and stop is called an exception is
-                  raised when errors is \"strict\" or nothing happens when
-                  errors is \"ignore\"
-        """
-
-        self._logger.debug("Stopping scheduler")
-
-        if errors not in ["strict", "ignore"]:
-            self._logger.warning(
-                f"Invalid errors \"{errors}\", falling back to \"ignore\""
-            )
-
-            errors = "ignore"
-
-        if not self.is_alive():
-            if errors == "strict":
-                raise ValueError("thread is not running")
-            elif errors == "ignore":
-                return
-
-        self.stop_target = True
-
-        self._logger.debug(f"Waiting {timeout} seconds")
-        self._thread.join(timeout)
-
-        if self.is_alive():
-            self._logger.warning("Scheduler is still running: killing it")
-
-        del self._thread
-        self._thread = None
-
-
-    def __del__(self):
-        """Safely stop scheduler on deletion."""
-
-        self._logger.debug("Deleting scheduler")
-
-        self.stop()
 
 
 class MyBot:
@@ -193,34 +74,14 @@ class MyBot:
         "vaccines_regional": None
     }
 
-    # correspondig datetime fmt for frquencies
-    _frequency_fmt: Dict[str, str] = {
-        "giornaliera": "%Y-%m-%d",
-        "settimanale": "anno %Y, settimana %W",
-        "mensile": "%Y-%m"
-    }
 
-    # offsets used to determine current period in report generation;
-    # values are (frequency, days offset) pairs
-    _frequency_offset: Dict[str, int] = {
-        "giornaliera": 0,
-        "settimanale": -7,
-        "mensile": -30
-    }
-
-    # do not send reports in this hours
-    _report_do_not_disturb: Tuple[str] = ("21:00", "10:00")
-
-    _report_scheduler: Scheduler = None
-
-
-    def _get_chat_logger(self, chat_id: int, /) -> Logger:
+    def get_chat_logger(self, chat_id: int, /) -> Logger:
         """Get Logger for chat."""
 
         return getLogger(f"{self}.chat_{chat_id}")
 
 
-    def _send_message(
+    def send_message(
         self, chat_id: int, /, parse_mode: str = "html",
         path: Optional[Path] = None, text: Optional[str] = None,
         fmt: Optional[Tuple[Any]] = None, **kwargs
@@ -250,7 +111,7 @@ class MyBot:
             if path.name.split(".")[-1] == "md":
                 parse_mode = "MarkdownV2"
 
-                self._get_chat_logger(chat_id).debug(
+                self.get_chat_logger(chat_id).debug(
                     "Markdown file detected: parse_mode changed to "
                     f"\"{parse_mode}\""
                 )
@@ -262,7 +123,7 @@ class MyBot:
             chat_id=chat_id, parse_mode=parse_mode, text=text, **kwargs
         )
 
-        self._get_chat_logger(chat_id).debug(
+        self.get_chat_logger(chat_id).debug(
             f"Sent message: parse_mode = \"{parse_mode}\", text = \"{text}\""
         )
 
@@ -275,8 +136,8 @@ class MyBot:
         user = update.effective_user
         chat = update.effective_chat
 
-        self._get_chat_logger(chat.id).debug("/start command")
-        self._get_chat_logger(chat.id).info(f"New chat {chat.id}")
+        self.get_chat_logger(chat.id).debug("/start command")
+        self.get_chat_logger(chat.id).info(f"New chat {chat.id}")
 
         if user.first_name != None and user.first_name != "":
             fmt = (user.first_name,)
@@ -284,7 +145,7 @@ class MyBot:
             # fallback
             fmt = (user.username,)
 
-        self._send_message(
+        self.send_message(
             chat.id, path=self._msg_dir.joinpath("start.md"), fmt=fmt
         )
 
@@ -297,9 +158,9 @@ class MyBot:
         user = update.effective_user
         chat = update.effective_chat
 
-        self._get_chat_logger(chat.id).debug("/help command")
+        self.get_chat_logger(chat.id).debug("/help command")
 
-        self._send_message(chat.id, path=self._msg_dir.joinpath("help.md"))
+        self.send_message(chat.id, path=self._msg_dir.joinpath("help.md"))
 
 
     def _set_reports(
@@ -313,7 +174,7 @@ class MyBot:
         user = update.effective_user
         chat = update.effective_chat
 
-        self._get_chat_logger(chat.id).debug(
+        self.get_chat_logger(chat.id).debug(
             f"/imposta_report command, setting = \"{setting}\""
         )
 
@@ -324,7 +185,7 @@ class MyBot:
             context.chat_data.clear()
             context.chat_data.update({"previous_settings": previous})
 
-            self._get_chat_logger(chat.id).debug(
+            self.get_chat_logger(chat.id).debug(
                 "Previous settings: "
                 f"{context.chat_data.get('previous_settings')}"
             )
@@ -333,7 +194,7 @@ class MyBot:
         else:
             context.chat_data.update({setting: update.message.text})
 
-            self._get_chat_logger(chat.id).debug(
+            self.get_chat_logger(chat.id).debug(
                 f"Setting: \"{setting}\" = \"{context.chat_data.get(setting)}\""
             )
 
@@ -347,10 +208,10 @@ class MyBot:
 
         # conversation is over: time for words is over!
         else:
-            self._get_chat_logger(chat.id).info(
+            self.get_chat_logger(chat.id).info(
                 f"Report settings: {context.chat_data}"
             )
-            self._send_message(
+            self.send_message(
                 chat.id, path=self._msg_dir.joinpath("setting_end.md"),
                 reply_markup=ReplyKeyboardRemove()
             )
@@ -358,7 +219,7 @@ class MyBot:
             return ConversationHandler.END
 
         # ask question
-        self._send_message(
+        self.send_message(
             chat.id, path=self._msg_dir.joinpath(f"{setting}_setting.md"),
             reply_markup=ReplyKeyboardMarkup(
                 np.array(self._report_settings[setting]).reshape(-1,1),
@@ -380,10 +241,10 @@ class MyBot:
         user = update.effective_user
         chat = update.effective_chat
 
-        self._get_chat_logger(chat.id).debug("Cancelling setting")
+        self.get_chat_logger(chat.id).debug("Cancelling setting")
 
         if invalid_setting:
-            self._get_chat_logger(chat.id).debug(
+            self.get_chat_logger(chat.id).debug(
                 f"Invalid setting: \"{update.message.text}\""
             )
 
@@ -392,17 +253,17 @@ class MyBot:
         context.chat_data.clear()
         context.chat_data.update(previous)
 
-        self._get_chat_logger(chat.id).debug(
+        self.get_chat_logger(chat.id).debug(
             f"Settings restored: {context.chat_data}"
         )
 
-        self._send_message(
+        self.send_message(
             chat.id, path=self._msg_dir.joinpath("cancel_setting.md"),
             reply_markup=ReplyKeyboardRemove()
         )
 
         if invalid_setting:
-            self._send_message(
+            self.send_message(
                 chat.id, path=self._msg_dir.joinpath("invalid_setting.txt"),
                 fmt=(update.message.text,), reply_markup=ReplyKeyboardRemove()
             )
@@ -418,13 +279,13 @@ class MyBot:
         user = update.effective_user
         chat = update.effective_chat
 
-        self._get_chat_logger(chat.id).debug("/disattiva_report command")
+        self.get_chat_logger(chat.id).debug("/disattiva_report command")
 
         context.chat_data.clear()
 
-        self._get_chat_logger(chat.id).info("Reports disabled")
+        self.get_chat_logger(chat.id).info("Reports disabled")
 
-        self._send_message(
+        self.send_message(
             chat.id, path=self._msg_dir.joinpath("disable_reports.md")
         )
 
@@ -437,20 +298,20 @@ class MyBot:
         user = update.effective_user
         chat = update.effective_chat
 
-        self._get_chat_logger(chat.id).debug("/stato_report command")
+        self.get_chat_logger(chat.id).debug("/stato_report command")
 
         settings = context.chat_data
 
-        self._get_chat_logger(chat.id).debug(f"Settings: {settings}")
+        self.get_chat_logger(chat.id).debug(f"Settings: {settings}")
 
         if settings == {}:
-            self._send_message(
+            self.send_message(
                 chat.id,
                 path=self._msg_dir.joinpath("disabled_report_status.md")
             )
             return
 
-        self._send_message(
+        self.send_message(
             chat.id, path=self._msg_dir.joinpath("active_report_status.md"),
             fmt=(
                 settings.get(key)
@@ -470,9 +331,9 @@ class MyBot:
         user = update.effective_user
         chat = update.effective_chat
 
-        self._get_chat_logger(chat.id).debug("/bug command")
+        self.get_chat_logger(chat.id).debug("/bug command")
 
-        self._send_message(
+        self.send_message(
             chat.id, path=self._msg_dir.joinpath("report_bug.md")
         )
 
@@ -485,9 +346,9 @@ class MyBot:
         user = update.effective_user
         chat = update.effective_chat
 
-        self._get_chat_logger(chat.id).debug("/feedback command")
+        self.get_chat_logger(chat.id).debug("/feedback command")
 
-        self._send_message(
+        self.send_message(
             chat.id, path=self._msg_dir.joinpath("feedback.md")
         )
 
@@ -504,7 +365,7 @@ class MyBot:
             msg = update.edited_message.text
 
         if msg == "Chi è il tuo padrone?":
-            self._send_message(
+            self.send_message(
                 chat.id, parse_mode="MarkdownV2",
                 text="[Andrea Serpolla](https://github.com/cavfiumella) è il "
                      "mio padrone\."
@@ -533,263 +394,82 @@ class MyBot:
             )
 
 
-    def _format_report(self, report: Report, /, subtitle: str) -> str:
-        """Format report generated by databases objects.
-
-        Parameters:
-        - report
-        - subtitle: reports have title in the form \"Report <current-period>\";
-                    subtitle is inserted generating \"Report <subtitle>
-                    <current-period>\"
-
-        Returns:
-        formatted text
-        """
-
-        self._logger.debug("Formatting report")
-
-        report = report.dropna()
-
-        s = f"Report {subtitle} {report.name}\n"
-        s += "-" * 40 + "\n"
-
-        for key in report.index.tolist():
-            s += key
-            s += "\n"
-
-            if "pct" in key.lower():
-                s += "{:.1%}".format(report.loc[key])
-            elif int(report.loc[key]) == report.loc[key]:
-                s += "{:d}".format(int(report.loc[key]))
-            else:
-                s += "{:.1f}".format(report.loc[key])
-
-            s += "\n"
-
-        return s
-
-
-    def _get_db_reports(
-        self, chat_id: str, db_key: str, db_key_translation: str,
-        files_keys: dict[str,str], current: str, fmt: str = "%Y-%m-%d"
-    ) -> dict[str,Report]:
-        """Based on user settings return subscribed reports for a certain
-        database.
-
-        Parameters:
-        - chat_id: used to get chat report settings
-        - db_key: database key, used to retrieve correct settings
-        - db_key_translation: used in report key generated
-        - files_keys: dict containing (area type, df file key) pairs where
-                      area type can be \"national\" or \"regional\" and file
-                      key is the key passed to Database.get_report method
-        - current, fmt: documented in BaseDatabase.get_report
-
-        Returns:
-        dict of reports
-        """
-
-        settings = self._updater.dispatcher.chat_data[chat_id]
-
-        self._get_chat_logger(chat_id).debug(
-            f"Getting db reports: db_key = \"{db_key}\", "
-            f"files_keys = {files_keys}, current = \"{current}\", "
-            f"fmt = \"{fmt}\", settings = {settings}"
-        )
-
-        # (subtitle, report) pairs
-        reports = {}
-
-        if settings.get(f"{db_key}_national") == "Sì":
-            reports[" ".join([db_key_translation, "Italia"])] \
-            = self._db[db_key].get_report(
-                files_keys["national"], current=current, fmt=fmt
-            )
-
-        region = settings.get(f"{db_key}_regional")
-
-        if region not in [None, "Nessun report"]:
-            reports[" ".join([db_key_translation, region])] \
-            = self._db[db_key].get_report(
-                files_keys["regional"], area=region, current=current,
-                fmt=fmt
-            )
-
-        return reports
-
-
-    def _send_reports(
-        self, chat_id: int, /, current: str, fmt: str = "%Y-%m-%d"
-    ) -> None:
-        """Send reports to chat.
-
-        Parameters:
-        - chat_id
-        - current, fmt: documented in BaseDatabase.get_report
-        """
-
-        self._get_chat_logger(chat_id).debug(
-            f"Sending reports: current = \"{current}\", fmt = \"{fmt}\""
-        )
-
-        # generate reports
-        reports = {}
-
-        for key, key_translation, files_keys in zip(
-            ["contagions", "vaccines"], ["contagi", "vaccini"],
-            [
-                {"national": "national", "regional": "regional"},
-                {"national": "doses", "regional": "doses"},
-            ]
-        ):
-            reports.update(self._get_db_reports(
-                chat_id=chat_id, db_key=key, db_key_translation=key_translation,
-                files_keys=files_keys, current=current, fmt=fmt
-            ))
-
-        # send reports
-
-        text = ""
-
-        for subtitle, report in reports.items():
-            text += "\n" + self._format_report(report, subtitle=subtitle)
-
-        self._send_message(chat_id, text=text)
-
-        self._get_chat_logger(chat_id).info(f"Reports \"{current}\" delivered")
-
-
-    def _report_scheduler_target(
-        self, scheduler: Scheduler, sleep: int, tz: str = "Europe/Rome",
-        master_sleep: int = 10
-    ) -> None:
-        """Keep trying to send new reports.
-
-        Parameters:
-        - scheduler: scheduler that uses this target
-        - sleep: sleeping time in seconds between consecutive reports
-                 sending attempts
-        - tz: timestamps timezone
-        - master_sleep: sleeping time in seconds between successive
-                        iterations of target execution
-        """
-
-        self._logger.debug(
-            f"Report scheduler target: self = {self}, sleep = {sleep}, "
-            f"tz = \"{tz}\", master_sleep = {master_sleep}"
-        )
-
-        # previous reports sending attempt
-        previous: pd.Timestamp = None
-
-        while not scheduler.stop_target:
-
-            # this is not the first iteration => master sleep
-            if previous != None:
-                time.sleep(master_sleep)
-
-            now = pd.Timestamp.utcnow().tz_convert(tz)
-
-            if previous != None and (now - previous).seconds <= sleep:
-                continue # sleep
-
-            self._logger.debug("Running report scheduler target")
-
-            previous = now
-
-            # do not disturb
-            T0, T = tuple(map(
-                lambda t: pd.Timestamp(t, tz=tz), self._report_do_not_disturb
-            ))
-
-            if T0 < T and T0 < now and now < T \
-            or T0 > T and (T0 < now or now < T):
-                self._logger.debug(
-                    f"Report scheduler target respects \"do not disturb\""
-                )
-                continue
-
-            # update databases
-            for db in self._db.values():
-                db.update()
-
-            for chat_id, settings in self._updater.dispatcher.chat_data.items():
-
-                for frequency in self._report_settings["frequency"]:
-                    fmt = self._frequency_fmt[frequency]
-
-                    self._get_chat_logger(chat_id).debug(
-                        f"Settings: {settings}"
-                    )
-
-                    current = now \
-                    + pd.Timedelta(days=self._frequency_offset[frequency])
-                    current = current.strftime(fmt)
-
-                    # skip user
-                    if settings.get("frequency") != frequency:
-                        self._get_chat_logger(chat_id).debug(
-                            "Skipping report delivery with frequency "
-                            f"\"{frequency}\": not subscribed"
-                        )
-                        continue
-
-                    # current report already sent
-                    if current == settings.get("last_report"):
-                        self._get_chat_logger(chat_id).debug(
-                            "Skipping report delivery with frequency "
-                            f"\"{frequency}\": already sent"
-                        )
-                        continue
-
-                    try:
-                        # send new report
-                        self._send_reports(
-                            chat_id, current=current, fmt=fmt
-                        )
-
-                        settings.update({"last_report": current})
-                        self._updater.dispatcher.update_persistence()
-
-                    except:
-                        # unable to send report
-                        self._get_chat_logger(chat_id).debug(
-                            "Report delivery encountered an error: "
-                            f"{traceback.format_exc()}"
-                        )
-
-
     def start(self):
-        """Start bot and report scheduler."""
+        """Start bot updater."""
 
         self._updater.start_polling()
-        self._report_scheduler.start()
+        self._logger.info("Bot updater started")
 
-        self._logger.info("Bot started")
 
-        # block main thread until bot runs
+    def idle(self):
+        """Do not return until updater is running."""
+
         self._updater.idle()
-
-        # safe exit
-        self.stop()
+        self._logger.info("Bot updater stopped")
 
 
     def stop(self):
-        """Stop bot and report scheduler."""
+        """Stop bot updater."""
 
-        # stop report scheduler
-        if self._report_scheduler.is_alive():
-            self._report_scheduler.stop()
-        else:
-            self._logger.debug("No running report scheduler to stop")
-
-        # stop bot
         if self._updater.running:
             self._updater.stop()
         else:
             self._logger.debug("No updater to stop")
 
-        self._logger.info("Bot stopped")
+        self._logger.info("Bot updater stopped")
+
+
+    def get_chat_data(
+        self, chat_id: Optional[str] = None, /
+    ) -> Union[defaultdict, dict]:
+        """Get a copy of stored chat data.
+
+        Parameters:
+        - chat_id: chat id of data to be returned; if None, all chat_data is
+                   returned
+        """
+
+        data = self._updater.dispatcher.chat_data.copy()
+
+        if chat_id != None:
+            data = data[chat_id]
+
+        self._logger.debug(
+            "Returning chat_data copy:" + \
+            f"\nchat_id = {chat_id}: {json.dumps(data, indent=4)}"
+            if chat_id != None else \
+            f"\nchat_data: {json.dumps(data, indent=4)}"
+        )
+
+        return data
+
+
+    def update_chat_data(self, up: Dict, chat_id: int = None) -> None:
+        """Update chat_data for chat_id with up.
+        defaultdict.update is called and persistent file is updated.
+        """
+
+        data = self._updater.dispatcher.chat_data
+
+        self._logger.debug(
+            "chat_data update BEFORE:" + \
+            f"\nchat_id = {chat_id}: {json.dumps(data, indent=4)}"
+            if chat_id != None else \
+            f"\nchat_data: {json.dumps(data, indent=4)}"
+        )
+
+        if chat_id != None:
+            data = data[chat_id]
+
+        data.update(up)
+        self._updater.dispatcher.update_persistence()
+
+        self._logger.debug(
+            "chat_data update AFTER:" + \
+            f"\nchat_id = {chat_id}: {json.dumps(data, indent=4)}"
+            if chat_id != None else \
+            f"\nchat_data: {json.dumps(data, indent=4)}"
+        )
 
 
     def __init__(
@@ -876,12 +556,6 @@ class MyBot:
 
         self._updater.dispatcher.bot.set_my_commands(
             list(self._commands_descriptions.items())
-        )
-
-        # report scheduler
-        self._report_scheduler = Scheduler(
-            target = self._report_scheduler_target,
-            kwargs = {"sleep": 30*60, "tz": "Europe/Rome"}
         )
 
 

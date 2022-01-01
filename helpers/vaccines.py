@@ -2,7 +2,7 @@
 """Covid-19 vaccination data module."""
 
 
-from .database import RemoteResource, LocalResource, Report, BaseDatabase
+from .database import RemoteResource, LocalResource, BaseDatabase
 
 from logging import getLogger
 from typing import Dict, Optional
@@ -17,21 +17,6 @@ LOGGER = getLogger(__name__)
 
 class Database(BaseDatabase):
     """BaseDatabase derived class for Covid-19 vaccination data."""
-
-    # columns to use for dataframes in report generation
-    _variables: Dict[str,str] = {
-        "deliveries": {
-            "data_consegna": "date",
-            "numero_dosi": "actual"
-        },
-        "doses": {
-            "data_somministrazione": "date",
-            "prima_dose": "actual",
-            "seconda_dose": "actual",
-            "pregressa_infezione": "actual",
-            "dose_addizionale_booster": "actual"
-        }
-    }
 
 
     def _dataset_update(
@@ -136,18 +121,6 @@ class Database(BaseDatabase):
         """Parameters documented in BaseDatabase.__init__"""
 
         BaseDatabase.__init__(self, remote=remote, local=local)
-
-
-    def get_report(
-        self, key: str, /, current: str, fmt: str = "%Y-%m-%d",
-        area: Optional[str] = None, errors="strict"
-    ) -> Report:
-        """Parameters documented in BaseDatabase.get_report"""
-
-        return BaseDatabase.get_report(
-            self, key, variables=self._variables[key], current=current, fmt=fmt,
-            area=area, errors=errors
-        )
 
 
     def get_df(

@@ -1,9 +1,9 @@
 
-"""Data collection and time developing reports generations."""
+"""Data collection and access module."""
 
 
 from logging import getLogger, Logger
-from typing import Dict, List, Tuple, Union, Optional
+from typing import Dict, List, Union, Optional
 from pathlib import Path
 import os
 from urllib.request import urlopen
@@ -14,13 +14,10 @@ import pandas as pd
 LOGGER = getLogger(__name__)
 
 
-# data resources aliases
+# types aliases
 Resource = Dict[str, Union[str, Path]]
 RemoteResource = Dict[str, str]
 LocalResource = Dict[str, Path]
-
-# data time developing reports
-Report = pd.Series
 
 
 class BaseDatabase:
@@ -224,151 +221,3 @@ class BaseDatabase:
         df = df.loc[df.loc[:, area_column] == area].drop(columns=area_column)
 
         return df
-
-
-    def get_report(
-        self, key: str, /, variables: Dict[str, str], current: str,
-        fmt: str = "%Y-%m-%d", area: Optional[str] = None,
-        errors: str = "strict"
-    ) -> Report:
-        """Generate data values variations between consecutive periods based on
-        current and fmt args.
-
-        Parameters:
-        - key: dataframe's csv file key
-        - variables: dataframe's variables to consider, i.e. a dict containing
-                     (column name, value type) pairs where implemented value
-                     types are \"cumulative\", \"actual\" and \"date\"; \"date\"
-                     variables are used to aggregate data and only one is used
-        - current: current period timestamp formatted according to fmt
-        - fmt: datetime format, it determines how to aggregate data, e.g.
-               * \"%Y-%m-%d\" will generate a report considering previous and
-                 current day as consecutive periods (i.e. a day report),
-               * \"%Y-%m\" will consider previous and current month as
-                 consecutive periods (i.e. a month report)
-        - area: area passed to get_df method
-        - errors: set if trying to continue execution or raise an
-                  exception when some condition is not respected;
-                  implemented values are \"strict\" and \"ignore\"
-
-        Returns:
-        report
-        """
-
-        df = self.get_df(key, area=area)
-
-        self._logger.debug(
-            f"Generating report \"{current}\" for dataframe \"{key}\"" + \
-            f", area = \"{area}\"" if area != None else ""
-        )
-
-        # errors fallback
-        if errors not in ["strict", "ignore"]:
-            self._logger.warning(
-                f"Invalid errors \"{errors}\"; falling back to \"ignore\""
-            )
-            errors = "ignore"
-
-        # check if there are some missing variables
-        isin_var = np.isin(
-            element=list(variables.keys()), test_elements=df.columns.tolist()
-        )
-
-        if not isin_var.all():
-            s = "missing variables found; ignoring them: "
-            s += str(np.array(list(variables.keys()))[isin_var].tolist())
-
-            if errors == "strict":
-                raise ValueError(s)
-            elif errors == "ignore":
-                self._logger.warning(s.capitalize())
-
-        # check if there is one or more date variables
-        is_date = np.apply_along_axis(
-            lambda s: s == "date", arr=list(variables.values()), axis=0
-        )
-
-        if not is_date.any():
-            raise ValueError("there is not a date variable in passed ones")
-
-        date_columns = np.array(list(variables.keys()))[is_date].tolist()
-
-        if is_date.sum() > 1:
-            s = f"there are more than one date variable: {date_columns}"
-
-            if errors == "strict":
-                raise ValueError(s)
-            elif errors == "ignore":
-                s += f"; using \"{date_columns[0]}\" to aggregate data"
-                self._logger.warning(s.capitalize())
-
-        date_column = date_columns[0]
-        date_column_fmt = "report_date"
-
-        self._logger.debug(
-            f"Date column: {date_column}; date column fmt: {date_column_fmt}"
-        )
-
-        # filter columns
-        df = df.filter(variables.keys())
-
-        # transform dates
-        df.insert(
-            loc=0, column=date_column_fmt,
-            value=df.loc[:, date_column].apply(
-                lambda t: pd.Timestamp(t).strftime(fmt)
-            )
-        )
-
-        # check current date is present in dataframe
-        if current not in df.loc[:, date_column_fmt].tolist():
-            raise ValueError(
-                f"dataframe does not contain current \"{current}\""
-            )
-
-        # get previous date
-        dates_fmt = df.loc[:, date_column_fmt].drop_duplicates().sort_values()
-        previous = dates_fmt.iloc[dates_fmt.tolist().index(current)-1]
-
-        self._logger.debug(f"Previous: \"{previous}\"")
-
-        # keep only current and previous dates to speed up calculations
-        df = df.loc[df.loc[:, date_column_fmt].isin([previous, current])]
-
-        # generate report
-        report = pd.Series(name=current, dtype=object)
-        for var, T in variables.items():
-
-            sel = df.filter([date_column, date_column_fmt, var])
-
-            if T == "actual":
-                pass
-            elif T == "cumulative": # convert in actual values
-                sel = sel.drop(columns=date_column_fmt)
-                sel = sel.groupby(date_column).max().diff()
-                sel = sel.reset_index()
-                sel.insert(
-                    loc=0, column=date_column_fmt,
-                    value=sel.loc[:, date_column].apply(
-                        lambda t: pd.Timestamp(t).strftime(fmt)
-                    )
-                )
-            else:
-                continue
-
-            sel = sel.drop(columns=date_column).groupby(date_column_fmt)
-
-            # insert in report
-            for name, value in zip(
-                ["totale", "media", "dev std", "var pct"],
-                map(
-                    lambda x: x.loc[current].values[0],
-                    [sel.sum(), sel.mean(), sel.std(), sel.mean().pct_change()]
-                )
-            ):
-                index = " ".join([name, var.replace("_", " ")]).capitalize()
-                report[index] = value
-
-        self._logger.debug(f"Returning report: {report}")
-
-        return report

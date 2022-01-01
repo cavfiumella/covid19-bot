@@ -2,7 +2,7 @@
 """Covid-19 contagions data module."""
 
 
-from .database import RemoteResource, LocalResource, Report, BaseDatabase
+from .database import RemoteResource, LocalResource, BaseDatabase
 
 from logging import getLogger
 from typing import Dict, Optional
@@ -15,22 +15,6 @@ LOGGER = getLogger(__name__)
 
 class Database(BaseDatabase):
     """BaseDatabase derived class for Covid-19 contagions data."""
-
-    # report variables
-    _variables: Dict[str,str] = {
-        "data": "date",
-        "nuovi_positivi": "actual",
-        "totale_positivi": "actual",
-        "ricoverati_con_sintomi": "actual",
-        "terapia_intensiva": "actual",
-        "isolamento_domiciliare": "actual",
-        "dimessi_guariti": "cumulative",
-        "deceduti": "cumulative",
-        "tamponi": "cumulative",
-        "tamponi_test_molecolare": "cumulative",
-        "tamponi_test_antigenico_rapido": "cumulative"
-    }
-
 
     def __init__(
         self, remote: RemoteResource = {
@@ -65,16 +49,4 @@ class Database(BaseDatabase):
         return BaseDatabase.get_df(
             self, key, area=area, area_column="denominazione_regione",
             errors=errors, **kwargs
-        )
-
-
-    def get_report(
-        self, key: str, /, current: str, fmt: str = "%Y-%m-%d",
-        area: Optional[str] = None, errors="strict"
-    ) -> Report:
-        """Parameters documented in BaseDatabase.get_report"""
-
-        return BaseDatabase.get_report(
-            self, key, variables=self._variables, current=current, fmt=fmt,
-            area=area, errors=errors
         )
