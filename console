@@ -34,7 +34,7 @@ def print_console_help(commands: Dict[str,str], /) -> None:
     print("Available commands:")
 
     for cmd, desc in commands.items():
-        print(f"\t{cmd}: {desc}")
+        print("\t" + cmd + " " + "." * (48-len(cmd)) + " " + desc)
 
 
 def start(
@@ -116,19 +116,19 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
     """
 
     commands = {
-        "h | help": "prints help message",
-        "s | start": "start Telegram bot",
-        "T | test": "start bot in test mode",
-        "A | announce": "send an announce to all users",
-        "r | read <path>": "read bot's presistence file",
-        "N | new <path> <data to edit> <id>": "insert new data in persistence "
-                                              "file (DANGER ZONE)",
-        "D | delete <path> <data to edit> <id>": "delete data from persistence "
-                                                 "file (DANGER ZONE)",
-        "E | edit <path> <data to edit> <id>": "edit data in persistence file "
-                                               "(DANGER ZONE)",
-        "X | exec": "execute Python code (DANGER ZONE)",
-        "q | quit": "quit"
+        "h|help": "prints help message",
+        "s|start": "start bot",
+        "T|test": "start bot in test mode",
+        "A|announce": "send an announce to all users",
+        "r|read <path>": "read bot's presistence file",
+        "N|new <path> <data to edit> <id>": "insert new data in persistence "
+                                            "file (DANGER ZONE)",
+        "D|delete <path> <data to edit> <id>": "delete data from persistence "
+                                               "file (DANGER ZONE)",
+        "E|edit <path> <data to edit> <id>": "edit data in persistence file "
+                                             "(DANGER ZONE)",
+        "X|exec": "execute Python code (DANGER ZONE)",
+        "q|quit": "quit"
     }
 
     db = {
