@@ -119,7 +119,7 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
         "h|help": "prints help message",
         "s|start": "start bot",
         "T|test": "start bot in test mode",
-        "A|announce": "send an announce to all users",
+        #"A|announce": "send an announce to all users",
         "r|read <path>": "read bot's presistence file",
         "N|new <path> <data to edit> <id>": "insert new data in persistence "
                                             "file (DANGER ZONE)",
