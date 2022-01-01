@@ -40,7 +40,7 @@ def print_console_help(commands: Dict[str,str], /) -> None:
 def start(
     db: Dict[str, BaseDatabase], mybot: Optional[MyBot] = None,
     token: Optional[str] = None, reporter: Optional[Reporter] = None,
-    test: bool = False
+    idle: bool = True, test: bool = False
 ) -> (MyBot, str, Reporter):
     """Start bot and reporter.
 
@@ -49,10 +49,13 @@ def start(
     - mybot: Telegram bot to starts, if None a new one is created
     - token: Telegram API token
     - reporter: Reporter object to use, if None a new one is created
+    - idle: keeps main thread until bot receive a signal to stop
     - test: run in test mode
 
     Returns:
-    updated mybot, token and reporter
+    updated mybot, token and reporter.
+    If idle is True mybot and reported are stopped, otherwise returned objects
+    are running
     """
 
     if token == None:
@@ -71,9 +74,9 @@ def start(
     mybot.start()
     reporter.start()
 
-    mybot.idle() # wait signal that stops bot
-
-    reporter.stop()
+    if idle:
+        mybot.idle() # wait signal that stops bot
+        reporter.stop()
 
     return mybot, token, reporter
 
@@ -119,7 +122,7 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
         "h|help": "prints help message",
         "s|start": "start bot",
         "T|test": "start bot in test mode",
-        #"A|announce": "send an announce to all users",
+        "A|announce": "send an announce to all users",
         "r|read <path>": "read bot's presistence file",
         "N|new <path> <data to edit> <id>": "insert new data in persistence "
                                             "file (DANGER ZONE)",
@@ -160,6 +163,31 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
             elif cmd[0] in ["test", "T"]:
                 print("Running bot in test mode...")
                 start(db, mybot, token, reporter, test=True)
+
+            elif cmd[0] in ["announce", "A"]:
+                mybot, token, reporter = start(
+                    db, mybot, token, reporter, idle=False
+                )
+
+                parse_mode = input("\nParse mode: ")
+                text = input("Text: ")
+
+                print(f"\nParse mode: {parse_mode}")
+                print(f"Text: \n{text}")
+
+                confirm = input("\nSend announcement? (y/N): ")
+
+                if confirm in ["y", "Y", "yes"]:
+                    for chat_id in mybot.get_chat_data().keys():
+                        mybot.send_message(
+                            chat_id, parse_mode=parse_mode, text=text
+                        )
+                    print("Announce sent.")
+                else:
+                    print("Operation cancelled.")
+
+                reporter.stop()
+                mybot.stop()
 
             elif cmd[0] in ["read", "r"]:
                 path = Path(cmd[1])
