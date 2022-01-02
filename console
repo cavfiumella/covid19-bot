@@ -63,8 +63,8 @@ def start(
 
     if test:
         # ignore mybot and reporter arguments
-        mybot = MyBot(token, db=db, persistence=False)
-        reporter = Reporter(mybot, db=db)
+        mybot = MyBot(token, db=db, pkl_path="bot_test.pkl")
+        reporter = Reporter(mybot, db=db, do_not_disturb=("00:00", "00:01"))
     else:
         if mybot == None:
             mybot = MyBot(token, db=db)
