@@ -171,6 +171,14 @@ class MyBot:
         )
 
 
+    def send_document(self, chat_id: Union[int,str], *args, **kwargs) -> None:
+        """Wrapper method for telegram.Bot.send_document."""
+
+        self.get_chat_logger(chat_id).debug("Sending a document")
+
+        self._dispatcher.bot.send_document(chat_id, *args, **kwargs)
+
+
     def _start(self, update: Update, context: CallbackContext) -> None:
         """/start command.
         Send a welcome message.
