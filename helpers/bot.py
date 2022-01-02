@@ -108,7 +108,7 @@ class MyBot:
 
 
     def send_message(
-        self, chat_id: int, /, parse_mode: str = "html",
+        self, chat_id: Union[int,str], /, parse_mode: str = "html",
         path: Optional[Path] = None, text: Optional[str] = None,
         disable_web_page_preview: bool = True, fmt: Optional[Tuple[Any]] = None,
         **kwargs
