@@ -340,7 +340,7 @@ class Reporter(Scheduler):
             sel = sel.drop(columns=date_column).groupby(date_column_fmt)
             values = list(map(
                 lambda x: x.loc[current].values[0],
-                [sel.sum(), sel.mean(), sel.std(), sel.mean().pct_change()]
+                [sel.sum(), sel.mean(), sel.std(), sel.mean().pct_change()*100]
             ))
 
             report = report.append(pd.DataFrame(
