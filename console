@@ -170,19 +170,21 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
                 )
 
                 parse_mode = input("\nParse mode: ")
-                text = input("Text: ")
+                path = Path(input("Path: "))
 
                 print(f"\nParse mode: {parse_mode}")
-                print(f"Text: \n{text}")
+
+                with open(path, "r") as file:
+                    print(f"Text: \n{file.read()}")
 
                 confirm = input("\nSend announcement? (y/N): ")
 
                 if confirm in ["y", "Y", "yes"]:
                     for chat_id in mybot.get_chat_data().keys():
                         mybot.send_message(
-                            chat_id, parse_mode=parse_mode, text=text
+                            chat_id, parse_mode=parse_mode, path=Path(path)
                         )
-                    print("Announce sent.")
+                    print("Announcement sent.")
                 else:
                     print("Operation cancelled.")
 
