@@ -384,20 +384,23 @@ class Reporter(Scheduler):
 
                 reports += [report]
 
-            region = settings.get(f"{key}_regional")
+            regions = settings.get(f"{key}_regional")
 
-            if region not in [None, "Nessun report"]:
-                report = self.get_report(
-                    self._db[key].get_df(
-                        self._db_files_keys[key]["regional"], area = region
-                    ),
-                    variables = self._db_variables[key],
-                    current = current, fmt = fmt
-                )
+            if regions != None:
+                for region in regions:
+                    if region != "Nessun report":
+                        report = self.get_report(
+                            self._db[key].get_df(
+                                self._db_files_keys[key]["regional"],
+                                area = region
+                            ),
+                            variables = self._db_variables[key],
+                            current = current, fmt = fmt
+                        )
 
-                report.name = f"{self._db_translations[key]} {region}"
+                        report.name = f"{self._db_translations[key]} {region}"
 
-                reports += [report]
+                        reports += [report]
 
         # format reports
         path = f"/tmp/report.xlsx"

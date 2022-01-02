@@ -243,7 +243,21 @@ class MyBot:
 
         # store answer to previous question
         else:
-            context.chat_data.update({setting: update.message.text})
+
+            # not a regional setting
+            if setting == None or "regional" not in setting:
+                context.chat_data.update({setting: update.message.text})
+
+            # regional setting
+            else:
+
+                # append to list or create a new one with regions
+                if setting in context.chat_data:
+                    # avoid inserting duplicates
+                    if update.message.text not in context.chat_data[setting]:
+                        context.chat_data[setting] += [update.message.text]
+                else:
+                    context.chat_data.update({setting: [update.message.text]})
 
             self.get_chat_logger(chat.id).debug(
                 f"Setting: \"{setting}\" = \"{context.chat_data.get(setting)}\""
@@ -251,14 +265,26 @@ class MyBot:
 
         settings = list(self._report_settings.keys())
 
-        # update conversation state
+        # ask first question
         if setting == None:
             setting = settings[0]
+
+        # keep asking for more regions
+        elif "regional" in setting and update.message.text != "Nessun report":
+            pass
+
+        # go to the next question
         elif settings.index(setting) + 1 < len(settings):
             setting = settings[settings.index(setting)+1]
 
         # conversation is over: time for words is over!
         else:
+
+            # remove unneeded "Nessun report" values in multiple regions lists
+            for key in context.chat_data.keys():
+                if "regional" in key and len(context.chat_data[key]) > 1:
+                    context.chat_data[key].remove("Nessun report")
+
             self.get_chat_logger(chat.id).info(
                 f"Report settings: {context.chat_data}"
             )
