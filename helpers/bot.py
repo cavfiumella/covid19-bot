@@ -110,7 +110,8 @@ class MyBot:
     def send_message(
         self, chat_id: int, /, parse_mode: str = "html",
         path: Optional[Path] = None, text: Optional[str] = None,
-        fmt: Optional[Tuple[Any]] = None, **kwargs
+        disable_web_page_preview: bool = True, fmt: Optional[Tuple[Any]] = None,
+        **kwargs
     ) -> None:
         """Send message.
 
@@ -120,6 +121,7 @@ class MyBot:
         - path: file containing the message, if path is a file with extension
                 \"*.md\" parse_mode is converted to \"MarkdownV2\"
         - text: text to send
+        - disable_web_page_preview
         - fmt: call str.format on text message with this arguments
         - additional kwargs: passed to telegram.Bot.send_message
 
@@ -147,7 +149,8 @@ class MyBot:
 
         try:
             self._dispatcher.bot.send_message(
-                chat_id=chat_id, parse_mode=parse_mode, text=text, **kwargs
+                chat_id=chat_id, parse_mode=parse_mode, text=text,
+                disable_web_page_preview=True, **kwargs
             )
         except ChatMigrated as ex:
             self.get_chat_logger(chat_id).debug("ChatMigration error")
@@ -160,7 +163,7 @@ class MyBot:
 
             self._dispatcher.bot.send_message(
                 chat_id=ex.new_chat_id, parse_mode=parse_mode, text=text,
-                **kwargs
+                disable_web_page_preview=True, **kwargs
             )
 
         self.get_chat_logger(chat_id).debug(
