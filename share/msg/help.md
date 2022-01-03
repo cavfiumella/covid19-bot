@@ -3,7 +3,7 @@ Il bot permette di ricevere aggiornamenti sui contagi e sulle vaccinazioni da Co
 I comandi disponibili sono i seguenti:
 \- /start stampa un messaggio di benvenuto all'avvio del bot,
 \- /help stampa un elenco dei comandi disponibile con una breve descrizione sul loro uso,
-\- /imposta\_report avvia una conversazione con cui impostare la ricezione degli aggiornamenti,
+\- /attiva\_report avvia una conversazione con cui impostare la ricezione degli aggiornamenti,
 \- /disattiva\_report disattiva gli aggiornamenti,
 \- /stato\_report visualizza le impostazioni attuali,
 \- /bug stampa un messaggio con i riferimenti per la segnalazione di un errore,

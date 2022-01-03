@@ -61,7 +61,7 @@ class MyBot:
     _commands_descriptions: Dict[str, str] = {
         "start": "messaggio di benvenuto",
         "help": "comandi disponibili e uso",
-        "imposta_report": "attiva gli aggiornamenti",
+        "attiva_report": "attiva gli aggiornamenti",
         "disattiva_report": "disattiva gli aggiornamenti",
         "stato_report": "visualizza impostazioni",
         "bug": "segnala un errore",
@@ -215,11 +215,11 @@ class MyBot:
         self.send_message(chat.id, path=self._msg_dir.joinpath("help.md"))
 
 
-    def _set_reports(
+    def _enable_reports(
         self, update: Update, context: CallbackContext,
         setting: Optional[str] = None
     ) -> Union[str,int]:
-        """/imposta_report command.
+        """/attiva_report command.
         Conversate with user to set reports.
         """
 
@@ -227,7 +227,7 @@ class MyBot:
         chat = update.effective_chat
 
         self.get_chat_logger(chat.id).debug(
-            f"/imposta_report command, setting = \"{setting}\""
+            f"/attiva_report command, setting = \"{setting}\""
         )
 
         # conversation starts, store current configuration to restore it later
@@ -616,12 +616,12 @@ class MyBot:
 
         # subscribe to reports handler
         self._dispatcher.add_handler(ConversationHandler(
-            entry_points=[CommandHandler("imposta_report", self._set_reports)],
+            entry_points=[CommandHandler("attiva_report", self._enable_reports)],
             states = {
                 setting: [MessageHandler(
                     Filters.update.message \
                     & Filters.text(self._report_settings[setting]),
-                    partial(self._set_reports, setting=setting)
+                    partial(self._enable_reports, setting=setting)
                 )]
                 for setting in self._report_settings.keys()
             },
