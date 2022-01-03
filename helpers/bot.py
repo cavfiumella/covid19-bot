@@ -295,6 +295,10 @@ class MyBot:
 
             return ConversationHandler.END
 
+        # update available regions
+        if "regional" in setting:
+            self._update_regions_answers()
+
         # ask question
         self.send_message(
             chat.id, path=self._msg_dir.joinpath(f"{setting}_setting.md"),
