@@ -14,6 +14,7 @@ I comandi disponibili sono i seguenti:
 - `/attiva_report` avvia una conversazione con cui impostare la ricezione degli aggiornamenti,
 - `/disattiva_report` disattiva gli aggiornamenti,
 - `/stato_report` visualizza le impostazioni attuali,
+- `/dashboard` visualizza una dashboard completa con grafici sui contagi e sulle vaccinazioni,
 - `/bug` stampa un messaggio con i riferimenti per la segnalazione di un errore,
 - `/feedback` stampa un messaggio con i riferimenti per lasciare un suggerimento.
 

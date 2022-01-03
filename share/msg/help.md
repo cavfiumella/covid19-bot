@@ -6,6 +6,7 @@ I comandi disponibili sono i seguenti:
 \- /attiva\_report avvia una conversazione con cui impostare la ricezione degli aggiornamenti,
 \- /disattiva\_report disattiva gli aggiornamenti,
 \- /stato\_report visualizza le impostazioni attuali,
+\- /dashboard visualizza una dashboard completa con grafici sui contagi e sulle vaccinazioni,
 \- /bug stampa un messaggio con i riferimenti per la segnalazione di un errore,
 \- /feedback stampa un messaggio con i riferimenti per lasciare un suggerimento\.
 

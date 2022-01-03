@@ -64,6 +64,7 @@ class MyBot:
         "attiva_report": "attiva gli aggiornamenti",
         "disattiva_report": "disattiva gli aggiornamenti",
         "stato_report": "visualizza impostazioni",
+        "dashboard": "visualizza grafici su contagi e vaccinazioni",
         "bug": "segnala un errore",
         "feedback": "lascia un suggerimento"
     }
@@ -405,6 +406,18 @@ class MyBot:
         )
 
 
+    def _dashboard(self, update: Update, context: CallbackContext) -> None:
+        """/dashboard command.
+        Send a link to an external dashboard of data.
+        """
+
+        chat_id = update.effective_chat.id
+
+        self.get_chat_logger(chat_id).debug("/dashboard command")
+
+        self.send_message(chat_id, path=self._msg_dir.joinpath("dashboard.md"))
+
+
     def _report_bug(self, update: Update, context: CallbackContext) -> None:
         """/bug command.
         Send \"report bug\" informative message.
@@ -643,6 +656,7 @@ class MyBot:
             "help": self._help,
             "disattiva_report": self._disable_reports,
             "stato_report": self._report_status,
+            "dashboard": self._dashboard,
             "bug": self._report_bug,
             "feedback": self._feedback
         }.items():
