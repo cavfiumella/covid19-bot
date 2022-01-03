@@ -387,6 +387,9 @@ class Reporter(Scheduler):
 
         regions = settings.get(f"{db_key}_regional")
 
+        if type(regions) == str:
+            regions = [regions]
+
         if regions != None:
             for region in regions:
                 if region != "Nessun report":
