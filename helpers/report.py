@@ -380,7 +380,8 @@ class Reporter(Scheduler):
                     fmt = fmt
                 )
 
-                report.name = f"{self._db_translations[key]} Italia"
+                report.name = \
+                f"{self._db_translations[key].capitalize()} Italia"
 
                 reports += [report]
 
@@ -398,7 +399,8 @@ class Reporter(Scheduler):
                             current = current, fmt = fmt
                         )
 
-                        report.name = f"{self._db_translations[key]} {region}"
+                        report.name = \
+                        f"{self._db_translations[key].capitalize()} {region}"
 
                         reports += [report]
 
