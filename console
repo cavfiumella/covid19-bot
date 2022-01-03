@@ -24,6 +24,9 @@ import pickle as pkl
 import json
 
 
+__version__ = get_version()
+
+
 def print_console_help(commands: Dict[str,str], /) -> None:
     """Prints console commands available and their descriptions.
 
@@ -331,7 +334,7 @@ if __name__ == "__main__":
         cmd = "test"
 
     if args.version:
-        print(f"Version {get_version()}")
+        print(f"Version {__version__}")
         sys.exit()
 
     sys.exit(console(cmd, args.token))
