@@ -16,7 +16,8 @@ I comandi disponibili sono i seguenti:
 - `/stato_report` visualizza le impostazioni attuali,
 - `/dashboard` visualizza una dashboard completa con grafici sui contagi e sulle vaccinazioni,
 - `/bug` stampa un messaggio con i riferimenti per la segnalazione di un errore,
-- `/feedback` stampa un messaggio con i riferimenti per lasciare un suggerimento.
+- `/feedback` stampa un messaggio con i riferimenti per lasciare un suggerimento,
+- `/versione` visualizza versione del bot
 
 ### Report
 

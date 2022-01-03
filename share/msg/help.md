@@ -8,6 +8,7 @@ I comandi disponibili sono i seguenti:
 \- /stato\_report visualizza le impostazioni attuali,
 \- /dashboard visualizza una dashboard completa con grafici sui contagi e sulle vaccinazioni,
 \- /bug stampa un messaggio con i riferimenti per la segnalazione di un errore,
-\- /feedback stampa un messaggio con i riferimenti per lasciare un suggerimento\.
+\- /feedback stampa un messaggio con i riferimenti per lasciare un suggerimento,
+\- /versione visualizza versione del bot
 
 Per maggiori informazioni [clicca qui](https://github.com/cavfiumella/covid19-bot/blob/main/README.md)\.

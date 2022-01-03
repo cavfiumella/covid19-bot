@@ -2,6 +2,7 @@
 """Telegram BOT sending Covid-19 updates."""
 
 
+from _version import get_version
 from .database import BaseDatabase, Contagions, Vaccines
 
 from logging import getLogger, Logger
@@ -33,6 +34,7 @@ from collections import defaultdict
 import json
 
 
+__version__ = get_version()
 LOGGER = getLogger(__name__)
 
 
@@ -66,7 +68,8 @@ class MyBot:
         "stato_report": "visualizza impostazioni",
         "dashboard": "visualizza grafici su contagi e vaccinazioni",
         "bug": "segnala un errore",
-        "feedback": "lascia un suggerimento"
+        "feedback": "lascia un suggerimento",
+        "versione": "visualizza versione bot"
     }
 
     # reports settings; values are (setting, available answers) pairs
@@ -448,6 +451,21 @@ class MyBot:
         )
 
 
+    def _version(self, update: Update, context: CallbackContext) -> None:
+        """/versione command.
+        Send bot version.
+        """
+
+        chat_id = update.effective_chat.id
+
+        self.get_chat_logger(chat_id).debug("/versione command")
+
+        self.send_message(
+            chat_id, path=self._msg_dir.joinpath("version.txt"),
+            fmt=(__version__,)
+        )
+
+
     def _easter_eggs(self, update: Update, context: CallbackContext) -> None:
         """This is just for fun."""
 
@@ -658,7 +676,8 @@ class MyBot:
             "stato_report": self._report_status,
             "dashboard": self._dashboard,
             "bug": self._report_bug,
-            "feedback": self._feedback
+            "feedback": self._feedback,
+            "versione": self._version
         }.items():
             self._dispatcher.add_handler(CommandHandler(command, callback))
 
