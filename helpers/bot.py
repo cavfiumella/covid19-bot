@@ -548,31 +548,23 @@ class MyBot:
         return data
 
 
-    def update_chat_data(self, up: Dict, chat_id: int = None) -> None:
-        """Update chat_data for chat_id with up.
-        defaultdict.update is called and persistent file is updated.
-        """
+    def update_last_report(self, chat_id: int, db_key: str, t: str) -> None:
+        """Update last_report timestamp for chat_id, db report with t."""
 
-        data = self._dispatcher.chat_data
+        self.get_chat_logger(chat_id).debug(f"Updating {db_key} last_report")
 
-        self._logger.debug(
-            "chat_data update BEFORE:" + \
-            f"\nchat_id = {chat_id}: {json.dumps(data, indent=4)}"
-            if chat_id != None else \
-            f"\nchat_data: {json.dumps(data, indent=4)}"
-        )
+        if type(self._dispatcher.chat_data[chat_id].get("last_report")) == dict:
+            self._dispatcher.chat_data[chat_id]["last_report"].update(
+                {db_key: t}
+            )
+        else:
+            self._dispatcher.chat_data[chat_id]["last_report"] = {db_key: t}
 
-        if chat_id != None:
-            data = data[chat_id]
-
-        data.update(up)
         self._dispatcher.update_persistence()
 
-        self._logger.debug(
-            "chat_data update AFTER:" + \
-            f"\nchat_id = {chat_id}: {json.dumps(data, indent=4)}"
-            if chat_id != None else \
-            f"\nchat_data: {json.dumps(data, indent=4)}"
+        self.get_chat_logger(chat_id).debug(
+            "Last report: "
+            f"{self._dispatcher.chat_data[chat_id]['last_report']}"
         )
 
 

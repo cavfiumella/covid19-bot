@@ -353,17 +353,19 @@ class Reporter(Scheduler):
 
 
     def send_reports(
-        self, chat_id: int, /, current: str, fmt: str = "%Y-%m-%d"
+        self, chat_id: int, db_key: str, /, current: str, fmt: str = "%Y-%m-%d"
     ) -> None:
         """Send reports to chat.
 
         Parameters:
         - chat_id
+        - db_key: select database for reports
         - current, fmt: documented in Reporter.get_report
         """
 
         self._bot.get_chat_logger(chat_id).debug(
-            f"Sending reports: current = \"{current}\", fmt = \"{fmt}\""
+            f"Sending reports: db_key = \"{db_key}\", current = \"{current}\", "
+            f"fmt = \"{fmt}\""
         )
 
         settings = self._bot.get_chat_data(chat_id)
@@ -371,38 +373,36 @@ class Reporter(Scheduler):
         # generate reports
         reports = []
 
-        for key in self._db.keys():
+        if settings.get(f"{db_key}_national") == "Sì":
+            report = self.get_report(
+                self._db[db_key].get_df(self._db_files_keys[db_key]["national"]),
+                variables = self._db_variables[db_key], current = current,
+                fmt = fmt
+            )
 
-            if settings.get(f"{key}_national") == "Sì":
-                report = self.get_report(
-                    self._db[key].get_df(self._db_files_keys[key]["national"]),
-                    variables = self._db_variables[key], current = current,
-                    fmt = fmt
-                )
+            report.name = \
+            f"{self._db_translations[key].capitalize()} Italia"
 
-                report.name = \
-                f"{self._db_translations[key].capitalize()} Italia"
+            reports += [report]
 
-                reports += [report]
+        regions = settings.get(f"{db_key}_regional")
 
-            regions = settings.get(f"{key}_regional")
+        if regions != None:
+            for region in regions:
+                if region != "Nessun report":
+                    report = self.get_report(
+                        self._db[db_key].get_df(
+                            self._db_files_keys[db_key]["regional"],
+                            area = region
+                        ),
+                        variables = self._db_variables[db_key],
+                        current = current, fmt = fmt
+                    )
 
-            if regions != None:
-                for region in regions:
-                    if region != "Nessun report":
-                        report = self.get_report(
-                            self._db[key].get_df(
-                                self._db_files_keys[key]["regional"],
-                                area = region
-                            ),
-                            variables = self._db_variables[key],
-                            current = current, fmt = fmt
-                        )
+                    report.name = \
+                    f"{self._db_translations[db_key].capitalize()} {region}"
 
-                        report.name = \
-                        f"{self._db_translations[key].capitalize()} {region}"
-
-                        reports += [report]
+                    reports += [report]
 
         # format and send reports
 
@@ -448,7 +448,7 @@ class Reporter(Scheduler):
         else:
             self._bot.get_chat_logger(chat_id).debug("Sending Excel report")
 
-            path = f"/tmp/report.xlsx"
+            path = f"/tmp/{db_key}.xlsx"
 
             with pd.ExcelWriter(path=path) as writer:
                 for report in reports:
@@ -458,11 +458,12 @@ class Reporter(Scheduler):
             with open(path, "rb") as file:
                 self._bot.send_document(
                     chat_id = chat_id, document = file.read(),
-                    filename = "report.xlsx", caption = current.capitalize()
+                    filename = f"{self._db_translations[db_key]}.xlsx",
+                    caption = current.capitalize()
                 )
 
         self._bot.get_chat_logger(chat_id).info(
-            f"Reports \"{current}\" delivered"
+            f"Reports \"{self._db_translations[db_key]} {current}\" delivered"
         )
 
 
@@ -513,8 +514,8 @@ class Reporter(Scheduler):
                 db.update()
 
             for chat_id, settings in self._bot.get_chat_data().items():
-
                 for frequency in self._frequencies:
+
                     fmt = self._frequency_fmt[frequency]
 
                     self._bot.get_chat_logger(chat_id).debug(
@@ -533,30 +534,33 @@ class Reporter(Scheduler):
                         )
                         continue
 
-                    # current report already sent
-                    if current == settings.get("last_report"):
-                        self._bot.get_chat_logger(chat_id).debug(
-                            "Skipping report delivery with frequency "
-                            f"\"{frequency}\": already sent"
-                        )
-                        continue
+                    for db_key in self._db.keys():
 
-                    try:
-                        # send new report
-                        self.send_reports(
-                            chat_id, current=current, fmt=fmt
-                        )
+                        # current report already sent
+                        if type(settings.get("last_report")) == dict \
+                        and current == settings["last_report"].get(db_key):
+                            self._bot.get_chat_logger(chat_id).debug(
+                                "Skipping report delivery with frequency "
+                                f"\"{frequency}\": already sent"
+                            )
+                            continue
 
-                        self._bot.update_chat_data(
-                            {"last_report": current}, chat_id
-                        )
+                        try:
+                            # send new report
+                            self.send_reports(
+                                chat_id, db_key, current=current, fmt=fmt
+                            )
 
-                    except:
-                        # unable to send report
-                        self._bot.get_chat_logger(chat_id).debug(
-                            "Report delivery encountered an error: "
-                            f"{traceback.format_exc()}"
-                        )
+                            self._bot.update_last_report(
+                                chat_id, db_key, current
+                            )
+
+                        except:
+                            # unable to send report
+                            self._bot.get_chat_logger(chat_id).debug(
+                                "Report delivery encountered an error: "
+                                f"{traceback.format_exc()}"
+                            )
 
 
     def __init__(
