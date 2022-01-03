@@ -621,20 +621,20 @@ class MyBot:
         self._dispatcher.add_handler(ConversationHandler(
             entry_points=[CommandHandler("imposta_report", self._set_reports)],
             states = {
-                setting: [
-                    MessageHandler(
-                        Filters.update.message \
-                        & Filters.text(self._report_settings[setting]),
-                        partial(self._set_reports, setting=setting)
-                    ),
-                    MessageHandler(
-                        ~ Filters.update.edited_message,
-                        partial(self._cancel_set_reports, invalid_setting=True)
-                    )
-                ]
+                setting: [MessageHandler(
+                    Filters.update.message \
+                    & Filters.text(self._report_settings[setting]),
+                    partial(self._set_reports, setting=setting)
+                )]
                 for setting in self._report_settings.keys()
             },
-            fallbacks = [CommandHandler("annulla", self._cancel_set_reports)]
+            fallbacks = [
+                CommandHandler("annulla", self._cancel_set_reports),
+                MessageHandler(
+                    ~ Filters.update.edited_message,
+                    partial(self._cancel_set_reports, invalid_setting=True)
+                )
+            ]
         ))
 
         self._dispatcher.add_handler(MessageHandler(
