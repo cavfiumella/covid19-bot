@@ -1,1 +1,1 @@
-Risposta "{0}" non riconosciuta.
+Risposta "{0}" non valida.
