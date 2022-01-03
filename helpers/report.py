@@ -402,19 +402,62 @@ class Reporter(Scheduler):
 
                         reports += [report]
 
-        # format reports
-        path = f"/tmp/report.xlsx"
+        # format and send reports
 
-        with pd.ExcelWriter(path=path) as writer:
+        # textual format
+        if settings.get("format") == "testuale":
+
+            self._bot.get_chat_logger(chat_id).debug("Sending textual report")
+
+            texts = []
+
             for report in reports:
-                report.to_excel(writer, sheet_name=report.name)
+                text = f"{report.name} ({current})\n"
+                text += "-" * 40 + "\n"
 
-        # send
-        with open(path, "rb") as file:
-            self._bot.send_document(
-                chat_id = chat_id, document = file.read(),
-                filename = "report.xlsx", caption = current.capitalize()
-            )
+                for row in report.index.tolist():
+                    for col in report.columns.tolist():
+                        text += col.capitalize() + " " + row
+                        text += "\n"
+
+                        x = report.loc[row,col]
+
+                        if int(x) == x:
+                            text += "{:d}".format(int(x))
+                        else:
+                            text += "{:.1f}".format(x)
+
+                        text += "\n"
+
+                texts += [text]
+
+            # send messages
+            for text in texts:
+                self._bot.send_message(
+                    chat_id, text=text,
+
+                    # notify only the first msg
+                    disable_notification = text != texts[0]
+                )
+
+        # excel format
+        # this handles also missing format setting
+        # (should not be but if there in case of a bug this is more secure)
+        else:
+            self._bot.get_chat_logger(chat_id).debug("Sending Excel report")
+
+            path = f"/tmp/report.xlsx"
+
+            with pd.ExcelWriter(path=path) as writer:
+                for report in reports:
+                    report.to_excel(writer, sheet_name=report.name)
+
+            # send
+            with open(path, "rb") as file:
+                self._bot.send_document(
+                    chat_id = chat_id, document = file.read(),
+                    filename = "report.xlsx", caption = current.capitalize()
+                )
 
         self._bot.get_chat_logger(chat_id).info(
             f"Reports \"{current}\" delivered"
