@@ -394,7 +394,7 @@ class MyBot:
             return
 
         self.send_message(
-            chat.id, path=self._msg_dir.joinpath("active_report_status.md"),
+            chat.id, path=self._msg_dir.joinpath("report_status.md"),
             fmt=(
                 settings.get(key)
                 for key in [
