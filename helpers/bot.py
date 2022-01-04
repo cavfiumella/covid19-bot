@@ -629,7 +629,7 @@ class MyBot:
             }
 
         self._logger.debug(
-            f"Bot created: msg_dir = \"{self._msg_dir}\", "
+            f"Creating bot: msg_dir = \"{self._msg_dir}\", "
             f"pkl_path = \"{self._pkl_path}\", db = \"{self._db}\""
         )
 
