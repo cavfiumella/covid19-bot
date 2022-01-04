@@ -57,6 +57,7 @@ class MyBot:
 
     # data files locations
     _msg_dir: Path = Path("share/msg")
+    _announcements_dir: Path = Path("share/announcements")
     _pkl_path: Path = Path("share/bot.pkl")
 
     # available commands; (command, description) pairs
@@ -602,7 +603,9 @@ class MyBot:
 
     def __init__(
         self, token: str, db: Optional[Dict[str, BaseDatabase]] = None,
-        msg_dir: Optional[Path] = None, pkl_path: Optional[Path] = None,
+        msg_dir: Optional[Path] = None,
+        announcements_dir: Optional[Path] = None,
+        pkl_path: Optional[Path] = None,
         persistence: bool = True,
     ):
         """Build and start the bot.
@@ -611,6 +614,7 @@ class MyBot:
         - db: databases objects
         - token: Telegram API token
         - msg_dir: dir to messages files
+        - announcements_dir: dir to new versions announcement *.md files
         - pkl_path: path to persistence file
         - persistence: make bot persistent
         """
@@ -690,6 +694,36 @@ class MyBot:
         self._dispatcher.bot.set_my_commands(
             list(self._commands_descriptions.items())
         )
+
+        # new version
+        if "__version__" in self._dispatcher.bot_data \
+        and __version__ != self._dispatcher.bot_data["__version__"]:
+
+            self._logger.info(f"New version {__version__}")
+
+            # save new version
+            self._dispatcher.bot_data["__version__"] = __version__
+            self._dispatcher.update_persistence()
+
+            # announce new version
+            path = self._announcements_dir.joinpath(f"{__version__}.md")
+
+            if path.exists():
+                for chat_id in self._dispatcher.chat_data.keys():
+                    self.send_message(
+                        chat_id, path=path, disable_notification=True,
+                        fmt=(__version__.replace(".", "\."),)
+                    )
+                self._logger.info("New version announced")
+            else:
+                self._logger.debug(f"No announcement for version {__version__}")
+
+        # save version if it is not
+        if "__version__" not in self._dispatcher.bot_data:
+            self._dispatcher.bot_data["__version__"] = __version__
+            self._dispatcher.update_persistence()
+
+        self._logger.debug(f"Bot data: {self._dispatcher.bot_data}")
 
 
     def __del__(self):
