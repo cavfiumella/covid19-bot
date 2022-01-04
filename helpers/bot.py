@@ -371,7 +371,7 @@ class MyBot:
 
         if invalid_setting:
             self.send_message(
-                chat.id, path=self._msg_dir.joinpath("invalid_setting.txt"),
+                chat.id, path=self._msg_dir.joinpath("invalid_setting.md"),
                 fmt=(update.message.text,), reply_markup=ReplyKeyboardRemove()
             )
 
@@ -490,7 +490,7 @@ class MyBot:
         self.get_chat_logger(chat_id).debug("/versione command")
 
         self.send_message(
-            chat_id, path=self._msg_dir.joinpath("version.txt"),
+            chat_id, path=self._msg_dir.joinpath("version.md"),
             fmt=(__version__,)
         )
 
