@@ -319,6 +319,9 @@ class MyBot:
                 reply_markup=ReplyKeyboardRemove()
             )
 
+            # show current settings
+            self._report_status(update, context)
+
             return ConversationHandler.END
 
         # update available regions
@@ -374,6 +377,9 @@ class MyBot:
                 chat.id, path=self._msg_dir.joinpath("invalid_setting.md"),
                 fmt=(update.message.text,), reply_markup=ReplyKeyboardRemove()
             )
+
+        # show current settings
+        self._report_status(update, context)
 
         return ConversationHandler.END
 
