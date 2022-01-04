@@ -655,7 +655,7 @@ class MyBot:
         # databases
         if db == None:
             self._db = {
-                key: eval(f"{key.capitalize}()")
+                key: eval(f"{key.capitalize()}()")
                 for key in ["contagions", "vaccines"]
             }
 
