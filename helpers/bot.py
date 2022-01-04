@@ -24,7 +24,7 @@ from telegram.ext import (
     ConversationHandler,
     MessageHandler
 )
-from telegram.error import ChatMigrated
+from telegram.error import ChatMigrated, BadRequest
 from telegram.ext.filters import Filters
 import pandas as pd
 import numpy as np
@@ -172,7 +172,24 @@ class MyBot:
 
                 chat_id = ex.new_chat_id
 
+            except BadRequest as ex:
 
+                if parse_mode != "MarkdownV2" \
+                or "is reserved and must be escaped" not in ex.message:
+                    raise
+
+                char = ex.message[
+                    ex.message.find("character") + len("character") + 2
+                ]
+
+                self._logger.debug(
+                    f"Unescaped character \"{char}\" in \"{text}\""
+                )
+
+                text = text.replace(f"\{char}", char)
+                text = text.replace(char, f"\{char}")
+
+                self._logger.debug(f"Corrected text: \"{text}\"")
 
         self.get_chat_logger(chat_id).debug(
             f"Sent message: parse_mode = \"{parse_mode}\", text = \"{text}\""
