@@ -75,8 +75,8 @@ class MyBot:
 
     # reports settings; values are (setting, available answers) pairs
     _report_settings: Dict[str, List[str]] = {
-        "format": ["testuale", "Excel"],
-        "frequency": ["giornaliera", "settimanale", "mensile"],
+        "format": ["Testuale", "Excel"],
+        "frequency": ["Giornaliera", "Settimanale", "Mensile"],
         "contagions_national": ["Sì", "No"],
         "contagions_regional": None,
         "vaccines_national": ["Sì", "No"],

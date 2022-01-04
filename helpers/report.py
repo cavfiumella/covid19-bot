@@ -149,21 +149,21 @@ class Reporter(Scheduler):
     _do_not_disturb: Tuple = ("21:00", "10:00")
 
     # report delivery frequencies
-    _frequencies: list[str] = ["giornaliera", "settimanale", "mensile"]
+    _frequencies: list[str] = ["Giornaliera", "Settimanale", "Mensile"]
 
     # correspondig datetime fmt for frquencies
     _frequency_fmt: Dict[str, str] = {
-        "giornaliera": "%Y-%m-%d",
-        "settimanale": "anno %Y, settimana %W",
-        "mensile": "%Y-%m"
+        "Giornaliera": "%Y-%m-%d",
+        "Settimanale": "anno %Y, settimana %W",
+        "Mensile": "%Y-%m"
     }
 
     # offsets used to determine current period in report generation;
     # values are (frequency, days offset) pairs
     _frequency_offset: Dict[str, int] = {
-        "giornaliera": 0,
-        "settimanale": -7,
-        "mensile": -30
+        "Giornaliera": 0,
+        "Settimanale": -7,
+        "Mensile": -30
     }
 
     # variables to use in reports: (db_name, (var_name, var_type))
@@ -410,7 +410,7 @@ class Reporter(Scheduler):
         # format and send reports
 
         # textual format
-        if settings.get("format") == "testuale":
+        if settings.get("format") == "Testuale":
 
             self._bot.get_chat_logger(chat_id).debug("Sending textual report")
 
