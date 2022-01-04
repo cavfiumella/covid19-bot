@@ -153,24 +153,26 @@ class MyBot:
         if fmt != None:
             text = text.format(*fmt)
 
-        try:
-            self._dispatcher.bot.send_message(
-                chat_id=chat_id, parse_mode=parse_mode, text=text,
-                disable_web_page_preview=True, **kwargs
-            )
-        except ChatMigrated as ex:
-            self.get_chat_logger(chat_id).debug("ChatMigration error")
+        while True:
+            try:
+                self._dispatcher.bot.send_message(
+                    chat_id=chat_id, parse_mode=parse_mode, text=text,
+                    disable_web_page_preview=True, **kwargs
+                )
+                break
 
-            self._migrate_chat_data(chat_id, ex.new_chat_id)
+            except ChatMigrated as ex:
+                self.get_chat_logger(chat_id).debug("ChatMigration error")
 
-            self.get_chat_logger(chat_id).info(
-                f"Chat migration: {chat_id} --> {ex.new_chat_id}"
-            )
+                self._migrate_chat_data(chat_id, ex.new_chat_id)
 
-            self._dispatcher.bot.send_message(
-                chat_id=ex.new_chat_id, parse_mode=parse_mode, text=text,
-                disable_web_page_preview=True, **kwargs
-            )
+                self.get_chat_logger(chat_id).info(
+                    f"Chat migration: {chat_id} --> {ex.new_chat_id}"
+                )
+
+                chat_id = ex.new_chat_id
+
+
 
         self.get_chat_logger(chat_id).debug(
             f"Sent message: parse_mode = \"{parse_mode}\", text = \"{text}\""
