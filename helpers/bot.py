@@ -399,15 +399,23 @@ class MyBot:
             )
             return
 
+        # build send_message fmt argument
+        fmt = [
+            settings.get(key)
+            for key in [
+                "frequency", "contagions_national", "contagions_regional",
+                "vaccines_national", "vaccines_regional"
+            ]
+        ]
+
+        # convert list to a nice string for printing
+        for i in range(len(fmt)):
+            if type(fmt[i]) == list:
+                fmt[i] = ", ".join(fmt[i]).rstrip(", ")
+
         self.send_message(
             chat.id, path=self._msg_dir.joinpath("report_status.md"),
-            fmt=(
-                settings.get(key)
-                for key in [
-                    "frequency", "contagions_national", "contagions_regional",
-                    "vaccines_national", "vaccines_regional"
-                ]
-            )
+            fmt=tuple(fmt)
         )
 
 
