@@ -337,7 +337,7 @@ class MyBot:
         return setting
 
 
-    def _cancel_set_reports(
+    def _cancel_conversation(
         self, update: Update, context: CallbackContext,
         invalid_setting: bool = False
     ) -> int:
@@ -689,10 +689,10 @@ class MyBot:
                 for setting in self._report_settings.keys()
             },
             fallbacks = [
-                CommandHandler("annulla", self._cancel_set_reports),
+                CommandHandler("annulla", self._cancel_conversation),
                 MessageHandler(
                     ~ Filters.update.edited_message,
-                    partial(self._cancel_set_reports, invalid_setting=True)
+                    partial(self._cancel_conversation, invalid_setting=True)
                 )
             ]
         ))
