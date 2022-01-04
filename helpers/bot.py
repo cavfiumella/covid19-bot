@@ -254,9 +254,10 @@ class MyBot:
             f"/attiva_report command, setting = \"{setting}\""
         )
 
-        # conversation starts, store current configuration to restore it later
-        # if needed
+        # conversation starts
         if setting == None:
+
+            # store current configuration to restore it later if needed
             context.chat_data.update({"previous_settings": None})
             previous = context.chat_data.copy()
             context.chat_data.clear()
@@ -266,6 +267,9 @@ class MyBot:
                 "Previous settings: "
                 f"{context.chat_data.get('previous_settings')}"
             )
+
+            # update available regions
+            self._update_regions_answers()
 
         # store answer to previous question
         else:
@@ -323,10 +327,6 @@ class MyBot:
             self._report_status(update, context)
 
             return ConversationHandler.END
-
-        # update available regions
-        if "regional" in setting:
-            self._update_regions_answers()
 
         # ask question
         self.send_message(
@@ -669,8 +669,6 @@ class MyBot:
             f"Creating bot: msg_dir = \"{self._msg_dir}\", "
             f"pkl_path = \"{self._pkl_path}\", db = \"{self._db}\""
         )
-
-        self._update_regions_answers()
 
         # bot
 
