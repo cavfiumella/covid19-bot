@@ -1,7 +1,5 @@
 Impostazioni degli aggiornamenti:
-
-\- Frequenza aggiornamenti: *{0}*
-\- Contagi Italia: *{1}*
-\- Contagi regione: *{2}*
-\- Vaccini Italia: *{3}*
-\- Vaccini regione: *{4}*
+\- formato dei report: *{0}*
+\- periodi di riferimento: *{1}*
+\- aree contagi: *{2}*
+\- aree vaccinazioni: *{3}*

@@ -1,4 +1,4 @@
-Seleziona il *formato* dei report da ricevere su *contagi e vaccinazioni*\.
+Seleziona i *periodi di riferimento* di cui ricevere gli aggiornamenti su *contagi e vaccinazioni*\.
 
 Risposta *_obbligatoria_*\.
 *_Max 1 risposta_*\.

@@ -148,22 +148,22 @@ class Reporter(Scheduler):
     _tz: str = "Europe/Rome"
     _do_not_disturb: Tuple = ("21:00", "10:00")
 
-    # report delivery frequencies
-    _frequencies: list[str] = ["Giornaliera", "Settimanale", "Mensile"]
+    # report delivery periods
+    _periods: list[str] = ["giorno", "settimana", "mese"]
 
     # correspondig datetime fmt for frquencies
-    _frequency_fmt: Dict[str, str] = {
-        "Giornaliera": "%Y-%m-%d",
-        "Settimanale": "anno %Y, settimana %W",
-        "Mensile": "%Y-%m"
+    _period_fmt: Dict[str, str] = {
+        "giorno": "%Y-%m-%d",
+        "settimana": "anno %Y, settimana %W",
+        "mese": "%Y-%m"
     }
 
     # offsets used to determine current period in report generation;
-    # values are (frequency, days offset) pairs
-    _frequency_offset: Dict[str, int] = {
-        "Giornaliera": 0,
-        "Settimanale": -7,
-        "Mensile": -30
+    # values are (period, days offset) pairs
+    _period_offset: Dict[str, int] = {
+        "giorno": 0,
+        "settimana": -7,
+        "mese": -30
     }
 
     # variables to use in reports: (db_name, (var_name, var_type))
@@ -373,7 +373,7 @@ class Reporter(Scheduler):
         # generate reports
         reports = []
 
-        if settings.get(f"{db_key}_national") == "Sì":
+        if settings.get(db_key) != None and "Italia" in settings.get(db_key):
             report = self.get_report(
                 self._db[db_key].get_df(self._db_files_keys[db_key]["national"]),
                 variables = self._db_variables[db_key], current = current,
@@ -385,10 +385,16 @@ class Reporter(Scheduler):
 
             reports += [report]
 
-        regions = settings.get(f"{db_key}_regional")
+        regions = settings.get(db_key)
 
         if type(regions) == str:
             regions = [regions]
+
+        if type(regions) == list:
+            try:
+                regions.remove("Italia")
+            except ValueError:
+                pass
 
         if regions != None:
             for region in regions:
@@ -410,7 +416,7 @@ class Reporter(Scheduler):
         # format and send reports
 
         # textual format
-        if settings.get("format") == "Testuale":
+        if settings.get("format") == "testuale":
 
             self._bot.get_chat_logger(chat_id).debug("Sending textual report")
 
@@ -517,23 +523,23 @@ class Reporter(Scheduler):
                 db.update()
 
             for chat_id, settings in self._bot.get_chat_data().items():
-                for frequency in self._frequencies:
+                for period in self._periods:
 
-                    fmt = self._frequency_fmt[frequency]
+                    fmt = self._period_fmt[period]
 
                     self._bot.get_chat_logger(chat_id).debug(
                         f"Settings: {settings}"
                     )
 
                     current = now \
-                    + pd.Timedelta(days=self._frequency_offset[frequency])
+                    + pd.Timedelta(days=self._period_offset[period])
                     current = current.strftime(fmt)
 
                     # skip user
-                    if settings.get("frequency") != frequency:
+                    if settings.get("period") != period:
                         self._bot.get_chat_logger(chat_id).debug(
-                            "Skipping report delivery with frequency "
-                            f"\"{frequency}\": not subscribed"
+                            "Skipping report delivery with period "
+                            f"\"{period}\": not subscribed"
                         )
                         continue
 
@@ -543,8 +549,8 @@ class Reporter(Scheduler):
                         if type(settings.get("last_report")) == dict \
                         and current == settings["last_report"].get(db_key):
                             self._bot.get_chat_logger(chat_id).debug(
-                                "Skipping report delivery with frequency "
-                                f"\"{frequency}\": already sent"
+                                "Skipping report delivery with period "
+                                f"\"{period}\": already sent"
                             )
                             continue
 
