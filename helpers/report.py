@@ -392,8 +392,8 @@ class Reporter(Scheduler):
 
         if type(regions) == list:
             try:
-                regions.pop("Italia")
-            except:
+                regions.remove("Italia")
+            except ValueError:
                 pass
 
         if regions != None:
