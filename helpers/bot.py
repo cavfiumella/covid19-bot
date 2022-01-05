@@ -273,7 +273,7 @@ class MyBot:
             # remove old configuration
             try:
                 context.chat_data.pop("previous_settings")
-            except:
+            except KeyError:
                 pass
 
             # save current settings to restore later if needed
