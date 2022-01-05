@@ -11,9 +11,7 @@ from pathlib import Path
 from telegram import (
     Update,
     Bot,
-    Chat,
-    ReplyKeyboardMarkup,
-    ReplyKeyboardRemove
+    Chat
 )
 from telegram.ext import (
     Updater,
@@ -73,14 +71,29 @@ class MyBot:
         "versione": "visualizza versione bot"
     }
 
-    # reports settings; values are (setting, available answers) pairs
-    _report_settings: Dict[str, List[str]] = {
-        "format": ["Testuale", "Excel"],
-        "frequency": ["Giornaliera", "Settimanale", "Mensile"],
-        "contagions_national": ["Sì", "No"],
-        "contagions_regional": None,
-        "vaccines_national": ["Sì", "No"],
-        "vaccines_regional": None
+    # reports delivery settings; values are (setting, available options) pairs
+    _settings: Dict[str, List[str]] = {
+        "format": ["testuale", "excel"], # report format
+        "period": ["giorno", "settimana", "mese"], # reference time period
+        "contagions": ["Italia"], # selected areas (Italy or regions)
+        "vaccines": ["Italia"] # selected areas (Italy or regions)
+        # regions are appended later
+    }
+
+    # mandatory settings
+    _mandatory: Dict[str,bool] = {
+        "format": True,
+        "period": True,
+        "contagions": False,
+        "vaccines": False
+    }
+
+    # settings with multiple answers allowed
+    _multiples: Dict[str,bool] = {
+        "format": False,
+        "period": False,
+        "contagions": True,
+        "vaccines": True
     }
 
 
@@ -279,53 +292,47 @@ class MyBot:
         # store answer to previous question
         else:
 
-            # not a regional setting
-            if setting == None or "regional" not in setting:
-                context.chat_data.update({setting: update.message.text})
+            # parse answer
+            text = update.message.text.lower()
+            answer = []
 
-            # regional setting
-            else:
+            for option in self._settings[setting]:
+                if option.lower() in text:
+                    answer += [option]
 
-                # append to list or create a new one with regions
-                if setting in context.chat_data:
-                    # avoid inserting duplicates
-                    if update.message.text not in context.chat_data[setting]:
-                        context.chat_data[setting] += [update.message.text]
-                else:
-                    context.chat_data.update({setting: [update.message.text]})
+            # invalid answer
+            if self._mandatory[setting] and len(answer) == 0:
+                return self._cancel_conversation(
+                    update=update, context=context, invalid_answer=True
+                )
+
+            # if multiple answers are not allowed take just the first valid
+            if not self._multiples[setting]:
+                answer = answer[0]
+
+            context.chat_data.update({setting: answer})
 
             self.get_chat_logger(chat.id).debug(
                 f"Setting: \"{setting}\" = \"{context.chat_data.get(setting)}\""
             )
 
-        settings = list(self._report_settings.keys())
+        settings = list(self._settings.keys())
 
         # ask first question
         if setting == None:
             setting = settings[0]
 
-        # keep asking for more regions
-        elif "regional" in setting and update.message.text != "Nessun report":
-            pass
-
-        # go to the next question
+        # ask next question
         elif settings.index(setting) + 1 < len(settings):
             setting = settings[settings.index(setting)+1]
 
         # conversation is over: time for words is over!
         else:
-
-            # remove unneeded "Nessun report" values in multiple regions lists
-            for key in context.chat_data.keys():
-                if "regional" in key and len(context.chat_data[key]) > 1:
-                    context.chat_data[key].remove("Nessun report")
-
             self.get_chat_logger(chat.id).info(
                 f"Report settings: {context.chat_data}"
             )
             self.send_message(
                 chat.id, path=self._msg_dir.joinpath("setting_end.md"),
-                reply_markup=ReplyKeyboardRemove()
             )
 
             # show current settings
@@ -336,10 +343,25 @@ class MyBot:
         # ask question
         self.send_message(
             chat.id, path=self._msg_dir.joinpath(f"{setting}_setting.md"),
-            reply_markup=ReplyKeyboardMarkup(
-                np.array(self._report_settings[setting]).reshape(-1,1),
-                one_time_keyboard=True
-            )
+        )
+
+        return setting
+
+
+    def _show_options(
+        self, update: Update, context: CallbackContext, setting: str
+    ) -> str:
+        """/opzioni command.
+        Show available options while in conversation with `/attiva_report`.
+        """
+
+        chat_id = update.effective_chat.id
+
+        self.get_chat_logger(chat_id).debug("/opzioni command")
+
+        self.send_message(
+            chat_id, path=self._msg_dir.joinpath("options.md"),
+            fmt = ("\- *" + "*\n\- *".join(self._settings[setting]) + "*",)
         )
 
         return setting
@@ -373,14 +395,13 @@ class MyBot:
         )
 
         self.send_message(
-            chat.id, path=self._msg_dir.joinpath("cancel_setting.md"),
-            reply_markup=ReplyKeyboardRemove()
+            chat.id, path=self._msg_dir.joinpath("cancel_setting.md")
         )
 
         if invalid_answer:
             self.send_message(
                 chat.id, path=self._msg_dir.joinpath("invalid_answer.md"),
-                fmt=(update.message.text,), reply_markup=ReplyKeyboardRemove()
+                fmt=(update.message.text,)
             )
 
         # show current settings
@@ -432,10 +453,7 @@ class MyBot:
         # build send_message fmt argument
         fmt = [
             settings.get(key)
-            for key in [
-                "frequency", "contagions_national", "contagions_regional",
-                "vaccines_national", "vaccines_regional"
-            ]
+            for key in ["format", "period", "contagions", "vaccines"]
         ]
 
         # convert list to a nice string for printing
@@ -538,12 +556,10 @@ class MyBot:
             regions = regions.loc[:, area_column].drop_duplicates()
             regions = regions.sort_values().tolist()
 
-            self._report_settings[f"{key}_regional"] = ["Nessun report"]
-            self._report_settings[f"{key}_regional"] += regions
+            self._settings[key] = ["Italia"] + regions
 
             self._logger.debug(
-                f"Available {key} regions: "
-                f"{self._report_settings[f'{key}_regional']}"
+                f"Available {key} regions: {self._settings[key]}"
             )
 
 
@@ -690,15 +706,20 @@ class MyBot:
         self._dispatcher.add_handler(ConversationHandler(
             entry_points=[CommandHandler("attiva_report", self._enable_reports)],
             states = {
-                setting: [MessageHandler(
-                    Filters.update.message \
-                    & Filters.text(self._report_settings[setting]),
-                    partial(self._enable_reports, setting=setting)
-                )]
-                for setting in self._report_settings.keys()
+                setting: [
+                    CommandHandler("annulla", self._cancel_conversation),
+                    CommandHandler(
+                        "opzioni", partial(self._show_options, setting=setting)
+                    ),
+                    MessageHandler(
+                        Filters.update.message & Filters.text,
+                        partial(self._enable_reports, setting=setting)
+                    )
+                ]
+                for setting in self._settings.keys()
             },
             fallbacks = [
-                CommandHandler("annulla", self._cancel_conversation),
+                #CommandHandler("annulla", self._cancel_conversation),
                 MessageHandler(
                     ~ Filters.update.edited_message,
                     partial(self._cancel_conversation, invalid_answer=True)
