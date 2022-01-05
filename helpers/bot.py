@@ -665,8 +665,8 @@ class MyBot:
         """Build and start the bot.
 
         Parameters:
-        - db: databases objects
         - token: Telegram API token
+        - db: databases objects
         - msg_dir: dir to messages files
         - announcements_dir: dir to new versions announcement *.md files
         - pkl_path: path to persistence file
@@ -751,6 +751,8 @@ class MyBot:
         self._dispatcher.bot.set_my_commands(
             list(self._commands_descriptions.items())
         )
+
+        # version announcement
 
         # new version
         if "__version__" in self._dispatcher.bot_data \
