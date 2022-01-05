@@ -269,7 +269,7 @@ class MyBot:
             )
 
             # update available regions
-            self._update_regions_answers()
+            self._update_regions()
 
         # store answer to previous question
         else:
@@ -520,7 +520,7 @@ class MyBot:
             )
 
 
-    def _update_regions_answers(self) -> None:
+    def _update_regions(self) -> None:
         """Update available regions in report settings."""
 
         self._logger.debug("Updating available regions")
