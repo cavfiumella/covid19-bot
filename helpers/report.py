@@ -149,23 +149,13 @@ class Reporter(Scheduler):
     _do_not_disturb: Tuple = ("21:00", "10:00")
 
     # report delivery periods
-    _periods: list[str] = [
-        "giorno", "settimana", "mese",
-
-        # backward compatibility
-        "Giornaliera", "Settimanale", "Mensile"
-    ]
+    _periods: list[str] = ["giorno", "settimana", "mese"]
 
     # correspondig datetime fmt for frquencies
     _period_fmt: Dict[str, str] = {
         "giorno": "%Y-%m-%d",
         "settimana": "anno %Y, settimana %W",
-        "mese": "%Y-%m",
-
-        # backward compatibility
-        "Giornaliera": "%Y-%m-%d",
-        "Settimanale": "anno %Y, settimana %W",
-        "Mensile": "%Y-%m"
+        "mese": "%Y-%m"
     }
 
     # offsets used to determine current period in report generation;
@@ -173,12 +163,7 @@ class Reporter(Scheduler):
     _period_offset: Dict[str, int] = {
         "giorno": 0,
         "settimana": -7,
-        "mese": -30,
-
-        # backward compatibility
-        "Giornaliera": 0,
-        "Settimanale": -7,
-        "Mensile": -30
+        "mese": -30
     }
 
     # variables to use in reports: (db_name, (var_name, var_type))
