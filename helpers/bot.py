@@ -682,6 +682,11 @@ class MyBot:
         self._dispatcher = self._updater.dispatcher
 
         # subscribe to reports handler
+
+        # needed to give ConversationHandler's filters available regions to
+        # filter
+        self._update_regions_answers()
+
         self._dispatcher.add_handler(ConversationHandler(
             entry_points=[CommandHandler("attiva_report", self._enable_reports)],
             states = {
