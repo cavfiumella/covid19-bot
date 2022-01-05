@@ -342,7 +342,7 @@ class MyBot:
 
     def _cancel_conversation(
         self, update: Update, context: CallbackContext,
-        invalid_setting: bool = False
+        invalid_answer: bool = False
     ) -> int:
         """/annulla command.
         Cancel current report setting conversation.
@@ -353,7 +353,7 @@ class MyBot:
 
         self.get_chat_logger(chat.id).debug("Cancelling setting")
 
-        if invalid_setting:
+        if invalid_answer:
             self.get_chat_logger(chat.id).debug(
                 f"Invalid setting: \"{update.message.text}\""
             )
@@ -372,9 +372,9 @@ class MyBot:
             reply_markup=ReplyKeyboardRemove()
         )
 
-        if invalid_setting:
+        if invalid_answer:
             self.send_message(
-                chat.id, path=self._msg_dir.joinpath("invalid_setting.md"),
+                chat.id, path=self._msg_dir.joinpath("invalid_answer.md"),
                 fmt=(update.message.text,), reply_markup=ReplyKeyboardRemove()
             )
 
@@ -696,7 +696,7 @@ class MyBot:
                 CommandHandler("annulla", self._cancel_conversation),
                 MessageHandler(
                     ~ Filters.update.edited_message,
-                    partial(self._cancel_conversation, invalid_setting=True)
+                    partial(self._cancel_conversation, invalid_answer=True)
                 )
             ]
         ))
