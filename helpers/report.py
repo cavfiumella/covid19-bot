@@ -15,11 +15,6 @@ import traceback
 LOGGER = getLogger(__name__)
 
 
-# types aliases
-Report = pd.DataFrame
-FormattedReport = bytes
-
-
 class Scheduler:
     """Scheduler class is a wrapper for threading.Thread class.
     It adds the functionality to start and stop a target function multiple times
@@ -209,7 +204,7 @@ class Reporter(Scheduler):
     def get_report(
         self, df: pd.DataFrame, /, variables: Dict[str, str], current: str,
         fmt: str = "%Y-%m-%d", errors: str = "strict"
-    ) -> Report:
+    ) -> pd.DataFrame:
         """Generate data values variations between consecutive periods based on
         current and fmt args for given variables in df.
 
