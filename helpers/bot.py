@@ -257,8 +257,13 @@ class MyBot:
         # conversation starts
         if setting == None:
 
-            # store current configuration to restore it later if needed
-            context.chat_data.update({"previous_settings": None})
+            # remove old configuration
+            try:
+                context.chat_data.pop("previous_settings")
+            except:
+                pass
+
+            # save current settings to restore later if needed
             previous = context.chat_data.copy()
             context.chat_data.clear()
             context.chat_data.update({"previous_settings": previous})
