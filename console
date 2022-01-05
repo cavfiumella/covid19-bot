@@ -10,9 +10,7 @@ Available console commands can be printed after starting with (h | help).
 
 
 from _version import get_version
-from helpers.database import BaseDatabase, Contagions, Vaccines
 from helpers.bot import MyBot
-from helpers.report import Reporter
 
 from argparse import ArgumentParser
 import logging
@@ -41,22 +39,19 @@ def print_console_help(commands: Dict[str,str], /) -> None:
 
 
 def start(
-    db: Dict[str, BaseDatabase], mybot: Optional[MyBot] = None,
-    token: Optional[str] = None, reporter: Optional[Reporter] = None,
+    mybot: Optional[MyBot] = None, token: Optional[str] = None,
     idle: bool = True, test: bool = False
-) -> (MyBot, str, Reporter):
-    """Start bot and reporter.
+) -> (MyBot, str):
+    """Start bot.
 
     Parameters:
-    - db: databases objects as a dict (i.e. {key: db})
     - mybot: Telegram bot to starts, if None a new one is created
     - token: Telegram API token
-    - reporter: Reporter object to use, if None a new one is created
     - idle: keeps main thread until bot receive a signal to stop
     - test: run in test mode
 
     Returns:
-    updated mybot, token and reporter.
+    updated mybot and token.
     If idle is True mybot and reported are stopped, otherwise returned objects
     are running
     """
@@ -65,23 +60,18 @@ def start(
         token = input("Token: ")
 
     if test:
-        # ignore mybot and reporter arguments
-        mybot = MyBot(token, db=db, pkl_path="bot_test.pkl")
-        reporter = Reporter(mybot, db=db, do_not_disturb=("00:00", "00:01"))
-    else:
-        if mybot == None:
-            mybot = MyBot(token, db=db)
-        if reporter == None:
-            reporter = Reporter(mybot, db=db)
+        mybot = MyBot(
+            token, pkl_path="bot_test.pkl", do_not_disturb=("00:00", "00:01")
+        )
+    elif mybot == None:
+            mybot = MyBot(token)
 
     mybot.start()
-    reporter.start()
 
     if idle:
         mybot.idle() # wait signal that stops bot
-        reporter.stop()
 
-    return mybot, token, reporter
+    return mybot, token
 
 
 def read_persistence(path: Path) -> dict:
@@ -137,13 +127,7 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
         "q|quit": "quit"
     }
 
-    db = {
-        key: eval(f"{key.capitalize()}()")
-        for key in ["contagions", "vaccines"]
-    }
-
     mybot: MyBot = None
-    reporter: Reporter = None
 
     while True:
 
@@ -161,16 +145,14 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
 
             elif cmd[0] in ["start", "s"]:
                 print("Running bot...")
-                mybot, token, reporter = start(db, mybot, token, reporter)
+                mybot, token = start(mybot, token)
 
             elif cmd[0] in ["test", "T"]:
                 print("Running bot in test mode...")
-                start(db, mybot, token, reporter, test=True)
+                start(mybot, token, test=True)
 
             elif cmd[0] in ["announce", "A"]:
-                mybot, token, reporter = start(
-                    db, mybot, token, reporter, idle=False
-                )
+                mybot, token = start(mybot, token, idle=False)
 
                 parse_mode = input("\nParse mode: ")
                 path = Path(input("Path: "))
@@ -191,7 +173,6 @@ def console(cmd: Optional[str] = None, token: Optional[str] = None) -> int:
                 else:
                     print("Operation cancelled.")
 
-                reporter.stop()
                 mybot.stop()
 
             elif cmd[0] in ["read", "r"]:
