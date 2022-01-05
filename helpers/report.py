@@ -3,7 +3,7 @@ from .database import BaseDatabase, Contagions, Vaccines
 from .bot import MyBot
 
 from logging import getLogger, Logger
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, Any
 import pandas as pd
 import numpy as np
 from threading import Thread
@@ -353,7 +353,8 @@ class Reporter(Scheduler):
 
 
     def send_reports(
-        self, chat_id: int, db_key: str, /, current: str, fmt: str = "%Y-%m-%d"
+        self, chat_id: int, db_key: str, current: str, fmt: str = "%Y-%m-%d",
+        settings: Optional[Dict[str,Any]] = None
     ) -> None:
         """Send reports to chat.
 
@@ -361,14 +362,17 @@ class Reporter(Scheduler):
         - chat_id
         - db_key: select database for reports
         - current, fmt: documented in Reporter.get_report
+        - settings: report generation settings; if None they are read from
+                    chat_data
         """
 
         self._bot.get_chat_logger(chat_id).debug(
             f"Sending reports: db_key = \"{db_key}\", current = \"{current}\", "
-            f"fmt = \"{fmt}\""
+            f"fmt = \"{fmt}\", settings = {json.dumps(settings, indent=4)}"
         )
 
-        settings = self._bot.get_chat_data(chat_id)
+        if settings == None:
+            settings = self._bot.get_chat_data(chat_id)
 
         # generate reports
         reports = []
