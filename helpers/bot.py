@@ -179,9 +179,9 @@ class Reporter(Scheduler):
     # offsets used to determine current period in report generation;
     # values are (period, days offset) pairs
     _period_offset: Dict[str, int] = {
-        "giorno": 0,
-        "settimana": -7,
-        "mese": -30
+        "giorno": -1,
+        "settimana": -9,
+        "mese": -32
     }
 
     # variables to use in reports: (db_name, (var_name, var_type))
