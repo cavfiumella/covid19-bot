@@ -161,7 +161,7 @@ class Reporter(Scheduler):
     # offsets used to determine current period in report generation;
     # values are (frequency, days offset) pairs
     _frequency_offset: Dict[str, int] = {
-        "giornaliera": 0,
+        "giornaliera": -1,
         "settimanale": -9,
         "mensile": -32
     }
