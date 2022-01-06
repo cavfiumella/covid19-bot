@@ -62,6 +62,7 @@ class MyBot:
     _commands_descriptions: Dict[str, str] = {
         "start": "messaggio di benvenuto",
         "help": "comandi disponibili e uso",
+        "help_dati": "aiuto sui valori dei report",
         "attiva_report": "attiva gli aggiornamenti",
         "disattiva_report": "disattiva gli aggiornamenti",
         "stato_report": "visualizza impostazioni",
@@ -250,6 +251,19 @@ class MyBot:
         self.get_chat_logger(chat.id).debug("/help command")
 
         self.send_message(chat.id, path=self._msg_dir.joinpath("help.md"))
+
+
+    def _help_data(self, update: Update, context: CallbackContext) -> None:
+        """/help_dati command.
+        Send help message for data variables.
+        """
+
+        user = update.effective_user
+        chat = update.effective_chat
+
+        self.get_chat_logger(chat.id).debug("/help_dati command")
+
+        self.send_message(chat.id, path=self._msg_dir.joinpath("help_data.md"))
 
 
     def _enable_reports(
@@ -739,6 +753,7 @@ class MyBot:
         for command, callback in {
             "start": self._start,
             "help": self._help,
+            "help_dati": self._help_data,
             "disattiva_report": self._disable_reports,
             "stato_report": self._report_status,
             "dashboard": self._dashboard,
