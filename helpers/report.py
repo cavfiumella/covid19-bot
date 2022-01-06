@@ -162,8 +162,8 @@ class Reporter(Scheduler):
     # values are (frequency, days offset) pairs
     _frequency_offset: Dict[str, int] = {
         "giornaliera": 0,
-        "settimanale": -7,
-        "mensile": -30
+        "settimanale": -9,
+        "mensile": -32
     }
 
     # variables to use in reports: (db_name, (var_name, var_type))
