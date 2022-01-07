@@ -1347,10 +1347,13 @@ class MyBot:
             ]
         ))
 
+         # chat migration handler
+
         self._dispatcher.add_handler(MessageHandler(
             Filters.status_update.migrate, self._chat_migration
         ))
 
+        # other handlers
         for command, callback in {
             "start": self._start,
             "help": self._help,
