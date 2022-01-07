@@ -224,6 +224,12 @@ class Reporter(Scheduler):
     }
 
 
+    def get_period_fmt(self, period: str) -> str:
+        """Return datetime fmt for passed period."""
+
+        return self._period_fmt[period]
+
+
     def get_report(
         self, df: pd.DataFrame, /, variables: Dict[str, str], current: str,
         fmt: str = "%Y-%m-%d", errors: str = "strict"
@@ -657,6 +663,7 @@ class MyBot:
         "attiva_report": "attiva gli aggiornamenti",
         "disattiva_report": "disattiva gli aggiornamenti",
         "stato_report": "visualizza impostazioni",
+        "richiedi_report": "richiedi report specifico",
         "dashboard": "visualizza grafici su contagi e vaccinazioni",
         "bug": "segnala un errore",
         "feedback": "lascia un suggerimento",
@@ -951,6 +958,85 @@ class MyBot:
         )
 
         return setting
+
+
+    def _request_report(
+        self, update: Update, context: CallbackContext,
+        setting: Optional[str] = None
+    ) -> None:
+        """/richiedi_report command.
+        Request a specific report. Conversation used to get report settings
+        is similar to the one used by `/attiva_report`.
+        """
+
+        chat_id = update.effective_chat.id
+
+        self.get_chat_logger(chat_id).debug(
+            f"/richiedi_report command, setting = \"{setting}\""
+        )
+
+        # read report settings using enable_reports
+        if setting != "current":
+            state = self._enable_reports(update, context, setting)
+
+            # continue _enable_reports' conversation
+            if state != ConversationHandler.END:
+                return state
+
+            # ask current period
+            else:
+                self.send_message(
+                    chat_id, path=self._msg_dir.joinpath("current_request.md")
+                )
+                return "current"
+
+        # store current date answer
+        current = update.message.text
+
+        self.get_chat_logger(chat_id).debug(
+            f"User answered \"{current}\" to current date for report "
+            "request"
+        )
+
+        # try send report
+        try:
+            # parse date
+            current = pd.to_datetime(current, format="%Y-%m-%d")
+
+            # format date
+            # this must be corrected avoiding the use of schedulers private var
+            fmt = self._scheduler.get_period_fmt(context.chat_data["period"])
+            current = current.strftime(fmt)
+
+            # send report
+            for key in self._db.keys():
+                self._scheduler.send_reports(chat_id, key, current, fmt)
+
+        # unable to send requested report
+        except:
+            self.get_chat_logger(chat_id).debug(
+                f"Unable to send requested report: {traceback.format_exc()}"
+            )
+
+            self.send_message(
+                chat_id,
+                path=self._msg_dir.joinpath("report_request_fail.md")
+            )
+
+        # restore settings
+        if "previous_settings" in context.chat_data:
+            previous = context.chat_data["previous_settings"].copy()
+            context.chat_data.clear()
+            context.chat_data.update(previous)
+            self.get_chat_logger(chat_id).debug(
+                f"Settings restored: {json.dumps(context.chat_data, indent=4)}"
+            )
+
+        else:
+            context.chat_data.clear()
+            self.get_chat_logger(chat_id).debug("No settings to restore")
+
+        return ConversationHandler.END
 
 
     def _show_options(
@@ -1338,6 +1424,45 @@ class MyBot:
                 ]
                 for setting in self._settings.keys()
             },
+            fallbacks = [
+                #CommandHandler("annulla", self._cancel_conversation),
+                MessageHandler(
+                    ~ Filters.update.edited_message,
+                    partial(self._cancel_conversation, invalid_answer=True)
+                )
+            ]
+        ))
+
+        # request report conversation; this is similar to the previous one
+        # for reports deliveries subscription
+
+        states = {
+            setting: [
+                CommandHandler("annulla", self._cancel_conversation),
+                CommandHandler(
+                    "opzioni", partial(self._show_options, setting=setting)
+                ),
+                MessageHandler(
+                    Filters.update.message & Filters.text,
+                    partial(self._request_report, setting=setting)
+                )
+            ]
+            for setting in self._settings.keys()
+        }
+
+        states["current"] = [
+            CommandHandler("annulla", self._cancel_conversation),
+            MessageHandler(
+                Filters.update.message & Filters.text,
+                partial(self._request_report, setting="current")
+            )
+        ]
+
+        self._dispatcher.add_handler(ConversationHandler(
+            entry_points=[
+                CommandHandler("richiedi_report", self._request_report)
+            ],
+            states = states,
             fallbacks = [
                 #CommandHandler("annulla", self._cancel_conversation),
                 MessageHandler(
