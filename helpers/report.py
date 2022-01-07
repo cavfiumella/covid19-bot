@@ -161,9 +161,9 @@ class Reporter(Scheduler):
     # offsets used to determine current period in report generation;
     # values are (frequency, days offset) pairs
     _frequency_offset: Dict[str, int] = {
-        "giornaliera": -1,
-        "settimanale": -9,
-        "mensile": -32
+        "giornaliera": pd.Timedelta(days = -1),
+        "settimanale": pd.Timedelta(days = -9),
+        "mensile": pd.Timedelta(days = -32)
     }
 
     # variables to use in reports: (db_name, (var_name, var_type))
@@ -525,8 +525,7 @@ class Reporter(Scheduler):
                         f"Settings: {settings}"
                     )
 
-                    current = now \
-                    + pd.Timedelta(days=self._frequency_offset[frequency])
+                    current = now + self._frequency_offset[frequency]
                     current = current.strftime(fmt)
 
                     # skip user
