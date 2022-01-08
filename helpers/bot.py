@@ -825,6 +825,17 @@ class MyBot:
                 self._dispatcher.bot.send_document(chat_id, *args, **kwargs)
                 break
 
+            except ChatMigrated as ex:
+                self.get_chat_logger(chat_id).debug("ChatMigration error")
+
+                self._migrate_chat_data(chat_id, ex.new_chat_id)
+
+                self.get_chat_logger(chat_id).info(
+                    f"Chat migration: {chat_id} --> {ex.new_chat_id}"
+                )
+
+                chat_id = ex.new_chat_id
+
             except:
                 self.get_chat_logger(chat_id).debug(
                     "Unhandled exception while sending document: "
