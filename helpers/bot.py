@@ -803,6 +803,13 @@ class MyBot:
 
                 self._logger.debug(f"Corrected text: \"{text}\"")
 
+            except:
+                self.get_chat_logger(chat_id).debug(
+                    "Unhandled exception while sending message: "
+                    f"{traceback.format_exc()}"
+                )
+                return
+
         self.get_chat_logger(chat_id).debug(
             f"Sent message: parse_mode = \"{parse_mode}\", text = \"{text}\""
         )
@@ -813,7 +820,17 @@ class MyBot:
 
         self.get_chat_logger(chat_id).debug("Sending a document")
 
-        self._dispatcher.bot.send_document(chat_id, *args, **kwargs)
+        while True:
+            try:
+                self._dispatcher.bot.send_document(chat_id, *args, **kwargs)
+                break
+
+            except:
+                self.get_chat_logger(chat_id).debug(
+                    "Unhandled exception while sending document: "
+                    f"{traceback.format_exc()}"
+                )
+                return
 
 
     def _start(self, update: Update, context: CallbackContext) -> None:
