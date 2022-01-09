@@ -1,14 +1,10 @@
-FROM ubuntu:21.10
+FROM python:3.9-slim
 
-ARG DEBIAN_FRONTEND=noninteractive
-WORKDIR /usr/local/app
+WORKDIR /usr/src/app
 
-# install requirements
-RUN apt -y update; apt -y install python3 python3-pip
-COPY requirements.txt .
-RUN pip install --no-input --no-cache-dir -r requirements.txt
-
-# install project
+# install app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
-CMD ["sh", "-c", "python3.9 main.py $TOKEN"]
+CMD ["sh", "-c", "./run -t $TOKEN"]
