@@ -8,12 +8,15 @@
 # local secrets
 secrets/
 
-# databases files
+# persistence files
+**/*.pkl
+
+# database files
 **/*.csv
 **/*.json
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 
