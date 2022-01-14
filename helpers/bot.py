@@ -418,28 +418,25 @@ class Reporter(Scheduler):
         if type(regions) == str:
             regions = [regions]
 
-        if type(regions) == list:
-            try:
-                regions.remove("Italia")
-            except ValueError:
-                pass
-
         if regions != None:
             for region in regions:
-                if region != "Nessun report":
-                    report = self.get_report(
-                        self._db[db_key].get_df(
-                            self._db_files_keys[db_key]["regional"],
-                            area = region
-                        ),
-                        variables = self._db_variables[db_key],
-                        current = current, fmt = fmt
-                    )
 
-                    report.name = \
-                    f"{self._db_translations[db_key].capitalize()} {region}"
+                if region == "Italia":
+                    continue
 
-                    reports += [report]
+                report = self.get_report(
+                    self._db[db_key].get_df(
+                        self._db_files_keys[db_key]["regional"],
+                        area = region
+                    ),
+                    variables = self._db_variables[db_key],
+                    current = current, fmt = fmt
+                )
+
+                report.name = \
+                f"{self._db_translations[db_key].capitalize()} {region}"
+
+                reports += [report]
 
         # format and send reports
 
