@@ -1,11 +1,7 @@
 #!/usr/bin/env python3.9
 
-"""Admin console for Telegram BOT defined in helpers.bot module.
-
-Available options can be printed calling
-    ./console [-h|--help]
-
-Available console commands can be printed after starting with (h | help).
+"""Runner script.
+Call `./run --help | -h` to get help.
 """
 
 
