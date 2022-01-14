@@ -54,7 +54,10 @@ if __name__ == "__main__":
     )
     parser.add_argument("-D", "--debug", action="store_true")
     parser.add_argument("-v", "--version", action="store_true")
-    parser.add_argument("-t", "--token", type=str, help="Telegram API token")
+    parser.add_argument(
+        "-t", "--token", type=str,
+        help="Telegram API token or path to file containing it"
+    )
 
     args = parser.parse_args()
     log_level = logging.INFO
@@ -73,6 +76,12 @@ if __name__ == "__main__":
     if not args.token:
         print("Token is required to start the bot!", file=sys.stderr)
         sys.exit(1)
+
+    if Path(args.token).exists() and Path(args.token).is_file():
+        with Path(args.token).open() as file:
+            LOGGER.debug(f"Reading token from \"{args.token}\"")
+            args.token = file.read().strip("\n")
+            LOGGER.debug(f"Token: \"{args.token}\"")
 
     exit_code = -1
 
