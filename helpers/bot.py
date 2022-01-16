@@ -402,9 +402,16 @@ class Reporter(Scheduler):
         reports = []
 
         if settings.get(db_key) != None and "Italia" in settings.get(db_key):
+            df = self._db[db_key].get_df(
+                self._db_files_keys[db_key]["national"]
+            )
+
+            # aggregate data of the same date and area
+            if db_key == "vaccines":
+                df = df.groupby("data_somministrazione").sum().reset_index()
+
             report = self.get_report(
-                self._db[db_key].get_df(self._db_files_keys[db_key]["national"]),
-                variables = self._db_variables[db_key], current = current,
+                df, variables = self._db_variables[db_key], current = current,
                 fmt = fmt
             )
 
@@ -424,12 +431,17 @@ class Reporter(Scheduler):
                 if region == "Italia":
                     continue
 
+                df = self._db[db_key].get_df(
+                    self._db_files_keys[db_key]["regional"],
+                    area = region
+                )
+
+                # aggregate data of the same date and area
+                if db_key == "vaccines":
+                    df = df.groupby("data_somministrazione").sum().reset_index()
+
                 report = self.get_report(
-                    self._db[db_key].get_df(
-                        self._db_files_keys[db_key]["regional"],
-                        area = region
-                    ),
-                    variables = self._db_variables[db_key],
+                    df, variables = self._db_variables[db_key],
                     current = current, fmt = fmt
                 )
 
